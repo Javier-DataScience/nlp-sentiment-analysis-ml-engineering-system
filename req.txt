@@ -1,0 +1,9 @@
+pip install numpy pandas scikit-learn
+pip install torch transformers mlflow dvc fastapi uvicorn pydantic pyyaml pytest streamlit gradio
+
+pip install jupyterlab
+pip install ipykernel
+
+
+python -m ipykernel install --user --name nlp_mle --display-name "Python (nlp_mle)" 
+pip install "apache-airflow==2.8.1" --constraint "https://raw.githubusercontent.com/apache/airflow/constraints-2.8.1/constraints-3.10.txt"
