@@ -7,3 +7,7 @@ pip install ipykernel
 
 python -m ipykernel install --user --name nlp_mle --display-name "Python (nlp_mle)" 
 pip install "apache-airflow==2.8.1" --constraint "https://raw.githubusercontent.com/apache/airflow/constraints-2.8.1/constraints-3.10.txt"
+pip install torch torchvision torchaudio
+#pip install torchtext
+pip install torchtext==0.15.1
+pip install "numpy<2"
