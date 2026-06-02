@@ -50,7 +50,7 @@ def build_vocabulary_from_csv(csv_path, min_freq=2):
 
     # Step 3: build vocabulary
     vocab = Vocabulary()
-    vocab.build([filtered_tokens])  # single corpus list
+    vocab.build([tokenizer.tokenize(text) for text in df["text"]])  # single corpus list
 
     return vocab
 
