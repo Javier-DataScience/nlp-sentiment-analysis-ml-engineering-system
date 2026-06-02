@@ -1,35 +1,73 @@
-# data_ingestion.py
-# This module is responsible for downloading and preparing the IMDb dataset
-# using HuggingFace Datasets (production-safe, cloud-ready, no torchtext dependency).
+"""
+data_ingestion.py
+
+PURPOSE:
+- Create a clean, reproducible dataset pipeline
+- Standardize dataset into:
+    data/raw/train.csv
+    data/raw/test.csv
+
+RULES:
+- NO notebooks dependency
+- NO manual file management
+- ALL folders are created automatically
+"""
 
 import os
 import pandas as pd
-from datasets import load_dataset
 
 
 class IMDBDataIngestion:
-    """
-    Downloads IMDb dataset from HuggingFace and saves train/test splits as CSV.
-    """
 
-    def __init__(self, output_dir="data/raw"):
-        self.output_dir = output_dir
-        os.makedirs(self.output_dir, exist_ok=True)
+    def __init__(self, input_dir="data/raw"):
+        self.input_dir = input_dir
 
-    def load_data(self):
-        dataset = load_dataset("imdb")
-        return dataset
+    def _ensure_dirs(self):
+        """
+        Ensures required project data structure exists.
+        """
+        os.makedirs("data/raw", exist_ok=True)
 
-    def save_as_csv(self):
-        dataset = self.load_data()
+    def load_dataset(self):
+        """
+        Loads dataset from project CSV files.
+        """
+        train_path = os.path.join(self.input_dir, "train.csv")
+        test_path = os.path.join(self.input_dir, "test.csv")
 
-        train_df = pd.DataFrame(dataset["train"])
-        test_df = pd.DataFrame(dataset["test"])
+        train_df = pd.read_csv(train_path)
+        test_df = pd.read_csv(test_path)
 
-        train_path = os.path.join(self.output_dir, "train.csv")
-        test_path = os.path.join(self.output_dir, "test.csv")
+        return train_df, test_df
 
-        train_df.to_csv(train_path, index=False)
-        test_df.to_csv(test_path, index=False)
+    def validate(self, train_df, test_df):
+        """
+        Basic sanity checks to ensure dataset integrity.
+        """
+        required_cols = ["text", "label"]
 
-        return train_path, test_path
+        for col in required_cols:
+            if col not in train_df.columns:
+                raise ValueError(f"Missing column in train: {col}")
+
+            if col not in test_df.columns:
+                raise ValueError(f"Missing column in test: {col}")
+
+    def run(self):
+        """
+        Main entry point for ingestion pipeline.
+        """
+        print("Ensuring data structure exists...")
+        self._ensure_dirs()
+
+        print("Loading dataset from data/raw/...")
+
+        train_df, test_df = self.load_dataset()
+
+        print("Validating dataset...")
+        self.validate(train_df, test_df)
+
+        print("Train size:", len(train_df))
+        print("Test size:", len(test_df))
+
+        return train_df, test_df
