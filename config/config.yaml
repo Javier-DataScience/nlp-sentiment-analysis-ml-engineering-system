@@ -1,0 +1,18 @@
+model:
+  type: baseline
+  vocab_size: 5000
+  embed_dim: 128
+  num_classes: 2
+
+training:
+  lr: 0.001
+  epochs: 1
+  batch_size: 2
+
+paths:
+  train_data: data/raw/train.csv
+  vocab_path: data/raw/vocab.pkl
+  model_output: models/model.pt
+
+mlflow:
+  experiment_name: sentiment_experiment

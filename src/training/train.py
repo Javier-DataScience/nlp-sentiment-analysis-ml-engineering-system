@@ -1,128 +1,136 @@
 """
 train.py
 
+============================================================
 PURPOSE:
-- Immutable training entrypoint for all experiments
-- Runs any model defined in a YAML config
-- Ensures reproducibility and MLflow tracking consistency
+------------------------------------------------------------
+This is the core training pipeline of the NLP system.
 
-ARCHITECTURE RULES:
-- NO model definitions here
-- NO MLflow logic here (only calls tracker)
-- NO hardcoded hyperparameters
-- EVERYTHING comes from config
+It is designed to be IMMUTABLE:
+- No model definitions here
+- No hyperparameters hardcoded
+- No experiment logic mixed in
+
+Everything is driven by external configuration (YAML).
+
+This ensures:
+- reproducibility
+- MLflow consistency
+- cloud compatibility (SageMaker / Azure ML)
+- clean separation of concerns
+
+============================================================
 """
 
-import argparse
-import yaml
 import torch
 import torch.nn as nn
-from torch.utils.data import DataLoader
-
-from src.data.dataset import SentimentDataset
-from src.features.collate import collate_batch
+import torch.optim as optim
 
 from src.models.model_factory import get_model
-from src.training.trainer import Trainer
+from src.data.dataset import get_dataloaders
+from src.utils.config import load_config
 from src.tracking.mlflow_tracker import MLflowTracker
 
 
-def load_config(path: str):
-    with open(path, "r") as f:
-        return yaml.safe_load(f)
+# ============================================================
+# TRAINING FUNCTION
+# ============================================================
 
+def train(config_path: str):
 
-def main(config_path: str):
-
-    # -------------------------
-    # 1. LOAD CONFIG (SOURCE OF TRUTH)
-    # -------------------------
+    # --------------------------------------------------------
+    # 1. LOAD CONFIG
+    # --------------------------------------------------------
     config = load_config(config_path)
 
-    # -------------------------
-    # 2. DATASET + DATALOADER
-    # -------------------------
-    dataset = SentimentDataset(
-        path=config["data"]["train_path"],
-        tokenizer=None,   # already embedded in dataset design
-        vocab=None
-    )
-
-    dataloader = DataLoader(
-        dataset,
-        batch_size=config["training"]["batch_size"],
-        shuffle=True,
-        collate_fn=collate_batch
-    )
-
-    # -------------------------
-    # 3. MODEL (MODEL ZOO)
-    # -------------------------
-    model = get_model(config["model"])
-
+    # --------------------------------------------------------
+    # 2. DEVICE SETUP
+    # --------------------------------------------------------
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+    # --------------------------------------------------------
+    # 3. DATA
+    # --------------------------------------------------------
+    train_loader, val_loader = get_dataloaders(config)
+
+    # --------------------------------------------------------
+    # 4. MODEL (via factory)
+    # --------------------------------------------------------
+    model = get_model(config)
     model.to(device)
 
-    # -------------------------
-    # 4. LOSS + OPTIMIZER
-    # -------------------------
-    criterion = nn.BCEWithLogitsLoss()
-    optimizer = torch.optim.Adam(
+    # --------------------------------------------------------
+    # 5. LOSS + OPTIMIZER
+    # --------------------------------------------------------
+    criterion = nn.CrossEntropyLoss()
+
+    optimizer = optim.Adam(
         model.parameters(),
         lr=config["training"]["lr"]
     )
 
-    # -------------------------
-    # 5. MLFLOW TRACKER (CONTROLLED LAYER)
-    # -------------------------
-    tracker = MLflowTracker(
-        experiment_name=config["experiment_name"]
-    )
+    # --------------------------------------------------------
+    # 6. MLflow tracking (centralized wrapper)
+    # --------------------------------------------------------
+    tracker = MLflowTracker(config)
+    tracker.start_run()
 
-    tracker.start_run(config)
+    # --------------------------------------------------------
+    # 7. TRAINING LOOP
+    # --------------------------------------------------------
+    epochs = config["training"]["epochs"]
 
-    # -------------------------
-    # 6. TRAINING LOOP
-    # -------------------------
-    for epoch in range(config["training"]["epochs"]):
+    for epoch in range(epochs):
 
-        epoch_loss = 0.0
+        model.train()
+        total_loss = 0
 
-        for batch in dataloader:
+        for batch in train_loader:
+
             inputs = batch["text"].to(device)
-            labels = batch["labels"].float().to(device)
+            labels = batch["label"].to(device)
 
             optimizer.zero_grad()
 
-            outputs = model(inputs).squeeze()
+            outputs = model(inputs)
             loss = criterion(outputs, labels)
 
             loss.backward()
             optimizer.step()
 
-            epoch_loss += loss.item()
+            total_loss += loss.item()
 
-        avg_loss = epoch_loss / len(dataloader)
+        avg_loss = total_loss / len(train_loader)
 
-        print(f"Epoch {epoch+1} | Loss: {avg_loss:.4f}")
+        # ----------------------------------------------------
+        # LOGGING
+        # ----------------------------------------------------
+        tracker.log_metric("train_loss", avg_loss, step=epoch)
 
-        # -------------------------
-        # LOGGING (CENTRALIZED)
-        # -------------------------
-        tracker.log_metric("loss", avg_loss, epoch)
+        print(f"Epoch {epoch+1}/{epochs} - Loss: {avg_loss:.4f}")
 
-    # -------------------------
-    # 7. SAVE MODEL ARTIFACT
-    # -------------------------
-    tracker.save_model(model)
+    # --------------------------------------------------------
+    # 8. SAVE MODEL ARTIFACT
+    # --------------------------------------------------------
+    model_path = config["paths"]["model_output"]
+
+    torch.save(model.state_dict(), model_path)
+
+    tracker.log_model(model, model_path)
 
     tracker.end_run()
 
 
+# ============================================================
+# ENTRY POINT
+# ============================================================
+
 if __name__ == "__main__":
+    import argparse
+
     parser = argparse.ArgumentParser()
     parser.add_argument("--config", type=str, required=True)
 
     args = parser.parse_args()
 
-    main(args.config)
+    train(args.config)
