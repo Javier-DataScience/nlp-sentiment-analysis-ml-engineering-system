@@ -11,3 +11,7 @@ pip install torch torchvision torchaudio
 #pip install torchtext
 pip install torchtext==0.15.1
 pip install "numpy<2"
+pip install mlflow
+
+pip install -e .
+pip install datasets
