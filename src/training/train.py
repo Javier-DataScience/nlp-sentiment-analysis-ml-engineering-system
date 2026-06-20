@@ -1,32 +1,22 @@
 # ============================================================
-# NLP TRAINING PIPELINE (IMDb + MULTI-MODEL + MLFLOW)
-# ============================================================
+# NLP TRAINING PIPELINE (DIAGNOSTIC OVERFIT MODE)
+# ------------------------------------------------------------
 # PURPOSE:
-# This module trains multiple NLP models (baseline, LSTM)
-# on the IMDb sentiment dataset from HuggingFace.
+# This version of the training pipeline is used to verify
+# that the full ML system is working correctly end-to-end.
 #
-# It performs:
-# - Data loading (IMDb train/test splits)
-# - Tokenization + vocabulary encoding
-# - Padding via custom collate function
-# - Model training loop (multi-model support)
-# - Evaluation per epoch (train + test metrics)
-# - MLflow experiment tracking (loss, accuracy, F1, etc.)
+# It performs an OVERFIT TEST on a small subset of the data
+# to validate:
+# - dataset correctness
+# - model learning capability
+# - training loop correctness
+# - gradient flow
 #
-# OUTPUT:
-# - Terminal logs per epoch:
-#     train_loss, train_accuracy, test_loss, test_accuracy
-# - MLflow UI tracking:
-#     all metrics per epoch + final precision/recall/F1
+# EXPECTED BEHAVIOR (IMPORTANT):
+# - Models should quickly reach near 100% training accuracy
+# - Loss should decrease significantly (< 0.2 ideally)
 #
-# MODELS TRAINED:
-# - baseline
-# - lstm
-# - gru
-#
-# NOTE:
-# Each model is trained sequentially and logged as a
-# separate MLflow run.
+# If this does NOT happen, there is a pipeline issue.
 # ============================================================
 
 import torch
@@ -34,23 +24,23 @@ import numpy as np
 import mlflow
 import warnings
 
-from torch.utils.data import DataLoader
+from torch.utils.data import DataLoader, Subset
 from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score
 
 from src.features.tokenizer import SimpleTokenizer
 from src.features.vocabulary import Vocabulary
 from src.data.dataset import SentimentDataset
-from src.models.model_factory import get_model
+from src.models.registry import MODEL_REGISTRY, get_model_by_name
 
 
 # ============================================================
-# SUPPRESS WARNINGS (clean terminal output)
+# CLEAN WARNINGS
 # ============================================================
 warnings.filterwarnings("ignore")
 
 
 # ============================================================
-# COLLATE FUNCTION (PAD SEQUENCES)
+# COLLATE FUNCTION (PADDING)
 # ============================================================
 def collate_fn(batch):
 
@@ -59,20 +49,20 @@ def collate_fn(batch):
 
     max_len = max(len(t) for t in texts)
 
-    padded_texts = []
+    padded = []
 
     for t in texts:
         pad = torch.zeros(max_len - len(t), dtype=torch.long)
-        padded_texts.append(torch.cat([t, pad]))
+        padded.append(torch.cat([t, pad]))
 
     return {
-        "text": torch.stack(padded_texts),
+        "text": torch.stack(padded),
         "label": labels
     }
 
 
 # ============================================================
-# MODEL EVALUATION
+# EVALUATION FUNCTION
 # ============================================================
 def evaluate(model, dataloader):
 
@@ -110,7 +100,7 @@ def evaluate(model, dataloader):
 
 
 # ============================================================
-# TRAIN SINGLE MODEL
+# TRAIN ONE MODEL
 # ============================================================
 def train_one_model(model_name, config, train_loader, test_loader):
 
@@ -118,8 +108,7 @@ def train_one_model(model_name, config, train_loader, test_loader):
     print(f"Training model: {model_name}")
     print("==============================")
 
-    config["model"]["type"] = model_name
-    model = get_model(config)
+    model = get_model_by_name(model_name, config)
 
     optimizer = torch.optim.Adam(model.parameters(), lr=config["training"]["lr"])
     loss_fn = torch.nn.CrossEntropyLoss()
@@ -181,7 +170,7 @@ def train_one_model(model_name, config, train_loader, test_loader):
 
 
 # ============================================================
-# MAIN ENTRY POINT
+# MAIN (DIAGNOSTIC OVERFIT TEST)
 # ============================================================
 def main():
 
@@ -190,7 +179,6 @@ def main():
 
     config = {
         "model": {
-            "type": "baseline",
             "vocab_size": 30522,
             "embed_dim": 128,
             "hidden_dim": 128,
@@ -199,11 +187,11 @@ def main():
         "training": {
             "lr": 0.001,
             "batch_size": 8,
-            "epochs": 3
+            "epochs": 10
         }
     }
 
-    print("Config loaded")
+    print("Config loaded (DIAGNOSTIC MODE)")
 
     tokenizer = SimpleTokenizer()
     vocab = Vocabulary()
@@ -211,30 +199,33 @@ def main():
     train_dataset = SentimentDataset("train", tokenizer, vocab)
     test_dataset = SentimentDataset("test", tokenizer, vocab)
 
-    print("Train size:", len(train_dataset))
-    print("Test size:", len(test_dataset))
+    print("FULL TRAIN SIZE:", len(train_dataset))
+    print("FULL TEST SIZE:", len(test_dataset))
+
+    # ========================================================
+    # OVERFIT SUBSET (DIAGNOSTIC TEST)
+    # ========================================================
+    train_subset = Subset(train_dataset, list(range(32)))
+    test_subset = Subset(test_dataset, list(range(32)))
 
     train_loader = DataLoader(
-        train_dataset,
+        train_subset,
         batch_size=config["training"]["batch_size"],
         shuffle=True,
         collate_fn=collate_fn
     )
 
     test_loader = DataLoader(
-        test_dataset,
+        test_subset,
         batch_size=config["training"]["batch_size"],
         shuffle=False,
         collate_fn=collate_fn
     )
 
-    models_to_train = [
-    "baseline",
-    "lstm",
-    "gru"
-    ]
-
-    for model_name in models_to_train:
+    # ========================================================
+    # TRAIN ALL MODELS IN REGISTRY
+    # ========================================================
+    for model_name in MODEL_REGISTRY:
         train_one_model(model_name, config, train_loader, test_loader)
 
 
