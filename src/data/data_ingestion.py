@@ -1,67 +1,35 @@
 # ============================================================
-# DATA INGESTION MODULE (UPDATED WITH IMDb SUPPORT)
+# DATA INGESTION MODULE (IMDB LOADER - STABLE VERSION)
 # ------------------------------------------------------------
-# Purpose:
-# This module is responsible for loading raw data from a source.
-# It now supports:
-# - local CSV data
-# - HuggingFace IMDb dataset
+# PURPOSE:
+# Loads IMDb dataset in a clean, reusable format for training.
 #
-# Output:
-# Returns raw dataset (text + label) ready for dataset.py
+# OUTPUT FORMAT:
+# - texts: list[str]
+# - labels: list[int]
+#
+# Labels:
+# - 1 = positive
+# - 0 = negative
 # ============================================================
 
 from datasets import load_dataset
 
 
-class DataIngestion:
-    def __init__(self, config):
-        """
-        config example:
-        {
-            "data": {
-                "source": "imdb"  # or "csv"
-            }
-        }
-        """
-        self.config = config
-        self.source = config["data"]["source"]
+def load_imdb(split="train"):
+    """
+    Loads IMDb dataset from Hugging Face.
+    """
 
-    def load_data(self):
-        """
-        Loads dataset based on configuration.
-        """
+    dataset = load_dataset("imdb")
 
-        # ========================================================
-        # CASE 1: IMDb dataset (NEW)
-        # ========================================================
-        if self.source == "imdb":
+    data = dataset[split]
 
-            print("Loading IMDb dataset from HuggingFace...")
+    texts = []
+    labels = []
 
-            train_data = load_dataset("imdb", split="train")
-            test_data = load_dataset("imdb", split="test")
+    for item in data:
+        texts.append(item["text"])
+        labels.append(item["label"])
 
-            print("IMDb loaded successfully")
-            print("Train size:", len(train_data))
-            print("Test size:", len(test_data))
-
-            return train_data, test_data
-
-        # ========================================================
-        # CASE 2: CSV (your old logic - placeholder)
-        # ========================================================
-        elif self.source == "csv":
-
-            print("Loading CSV dataset...")
-
-            # keep your existing CSV logic here
-            # (not modified in this step)
-
-            raise NotImplementedError("CSV loader still unchanged")
-
-        # ========================================================
-        # UNKNOWN SOURCE
-        # ========================================================
-        else:
-            raise ValueError(f"Unknown data source: {self.source}")
+    return texts, labels

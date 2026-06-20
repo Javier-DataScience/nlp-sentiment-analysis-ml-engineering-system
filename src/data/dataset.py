@@ -1,51 +1,64 @@
 # ============================================================
-# SENTIMENT DATASET (IMDb - HuggingFace FIXED VERSION)
+# SENTIMENT DATASET (IMPROVED REPRESENTATION LAYER)
 # ------------------------------------------------------------
 # PURPOSE:
-# Fully stable dataset loader using HuggingFace IMDb.
-# Ensures correct train/test sizes and consistent encoding.
+# This dataset prepares IMDb data for NLP models with:
+# - consistent tokenization
+# - controlled vocabulary mapping
+# - stable tensor output
+#
+# This version improves:
+# - label consistency
+# - sequence integrity
+# - model learning signal
 # ============================================================
 
-from datasets import load_dataset
 import torch
+from torch.utils.data import Dataset
 
 
-class SentimentDataset:
+class SentimentDataset(Dataset):
 
-    def __init__(self, split, tokenizer, vocab, max_len=256):
-
-        # Load IMDb directly from HuggingFace
-        dataset = load_dataset("imdb", split=split)
-
-        self.texts = dataset["text"]
-        self.labels = dataset["label"]
+    def __init__(self, split, tokenizer, vocab):
 
         self.tokenizer = tokenizer
         self.vocab = vocab
-        self.max_len = max_len
+
+        # IMPORTANT: assuming HuggingFace-style loading already implemented
+        # split = "train" or "test"
+        self.data = self._load_data(split)
+
+    def _load_data(self, split):
+
+        # Expect format: list of (text, label)
+        # This assumes you already built IMDb ingestion correctly
+        from src.data.data_ingestion import load_imdb
+
+        texts, labels = load_imdb(split)
+
+        return list(zip(texts, labels))
 
     def __len__(self):
-        return len(self.texts)
-
-    def encode(self, text):
-
-        tokens = self.tokenizer.tokenize(text)
-        ids = self.vocab.encode(tokens)
-
-        # truncate only (no padding here)
-        if len(ids) > self.max_len:
-            ids = ids[: self.max_len]
-
-        return ids
+        return len(self.data)
 
     def __getitem__(self, idx):
 
-        text = self.texts[idx]
-        label = self.labels[idx]
+        text, label = self.data[idx]
 
-        ids = self.encode(text)
+        # 1. tokenize
+        tokens = self.tokenizer.tokenize(text)
+
+        # 2. convert to ids (IMPORTANT FIX)
+        token_ids = [
+            self.vocab.get(token) for token in tokens
+            if self.vocab.get(token) is not None
+        ]
+
+        # safety fallback (avoid empty sequences)
+        if len(token_ids) == 0:
+            token_ids = [0]
 
         return {
-            "text": torch.tensor(ids, dtype=torch.long),
+            "text": torch.tensor(token_ids, dtype=torch.long),
             "label": torch.tensor(label, dtype=torch.long)
         }

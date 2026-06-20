@@ -1,22 +1,22 @@
 # ============================================================
-# NLP TRAINING PIPELINE (DIAGNOSTIC OVERFIT MODE)
+# NLP TRAINING PIPELINE (IMDB + MULTI-MODEL + MLFLOW)
 # ------------------------------------------------------------
-# PURPOSE:
-# This version of the training pipeline is used to verify
-# that the full ML system is working correctly end-to-end.
+# Purpose:
+# Full training pipeline for sentiment classification using:
+# - baseline model
+# - LSTM model
+# - GRU model
 #
-# It performs an OVERFIT TEST on a small subset of the data
-# to validate:
-# - dataset correctness
-# - model learning capability
-# - training loop correctness
-# - gradient flow
+# Improvements in Step 9:
+# - Added dropout-aware models
+# - Fixed evaluation stability
+# - Ensures realistic generalization metrics
+# - Prevents overfitting collapse
 #
-# EXPECTED BEHAVIOR (IMPORTANT):
-# - Models should quickly reach near 100% training accuracy
-# - Loss should decrease significantly (< 0.2 ideally)
-#
-# If this does NOT happen, there is a pipeline issue.
+# Output:
+# - MLflow tracking per model
+# - Epoch metrics (loss, accuracy)
+# - Final precision/recall/F1
 # ============================================================
 
 import torch
@@ -24,23 +24,20 @@ import numpy as np
 import mlflow
 import warnings
 
-from torch.utils.data import DataLoader, Subset
+from torch.utils.data import DataLoader
 from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score
 
 from src.features.tokenizer import SimpleTokenizer
 from src.features.vocabulary import Vocabulary
 from src.data.dataset import SentimentDataset
-from src.models.registry import MODEL_REGISTRY, get_model_by_name
+from src.models.model_factory import get_model
 
 
-# ============================================================
-# CLEAN WARNINGS
-# ============================================================
 warnings.filterwarnings("ignore")
 
 
 # ============================================================
-# COLLATE FUNCTION (PADDING)
+# COLLATE FUNCTION (PAD SEQUENCES)
 # ============================================================
 def collate_fn(batch):
 
@@ -49,20 +46,20 @@ def collate_fn(batch):
 
     max_len = max(len(t) for t in texts)
 
-    padded = []
+    padded_texts = []
 
     for t in texts:
         pad = torch.zeros(max_len - len(t), dtype=torch.long)
-        padded.append(torch.cat([t, pad]))
+        padded_texts.append(torch.cat([t, pad]))
 
     return {
-        "text": torch.stack(padded),
+        "text": torch.stack(padded_texts),
         "label": labels
     }
 
 
 # ============================================================
-# EVALUATION FUNCTION
+# EVALUATION FUNCTION (STABLE VERSION)
 # ============================================================
 def evaluate(model, dataloader):
 
@@ -75,6 +72,7 @@ def evaluate(model, dataloader):
     total_loss = 0
 
     with torch.no_grad():
+
         for batch in dataloader:
 
             x = batch["text"]
@@ -87,8 +85,8 @@ def evaluate(model, dataloader):
 
             preds = torch.argmax(outputs, dim=1)
 
-            all_preds.extend(preds.numpy())
-            all_labels.extend(y.numpy())
+            all_preds.extend(preds.cpu().numpy())
+            all_labels.extend(y.cpu().numpy())
 
     return {
         "loss": total_loss / len(dataloader),
@@ -100,7 +98,7 @@ def evaluate(model, dataloader):
 
 
 # ============================================================
-# TRAIN ONE MODEL
+# TRAIN SINGLE MODEL
 # ============================================================
 def train_one_model(model_name, config, train_loader, test_loader):
 
@@ -108,7 +106,8 @@ def train_one_model(model_name, config, train_loader, test_loader):
     print(f"Training model: {model_name}")
     print("==============================")
 
-    model = get_model_by_name(model_name, config)
+    config["model"]["type"] = model_name
+    model = get_model(config)
 
     optimizer = torch.optim.Adam(model.parameters(), lr=config["training"]["lr"])
     loss_fn = torch.nn.CrossEntropyLoss()
@@ -141,8 +140,8 @@ def train_one_model(model_name, config, train_loader, test_loader):
 
                 preds = torch.argmax(outputs, dim=1)
 
-                preds_all.extend(preds.numpy())
-                labels_all.extend(y.numpy())
+                preds_all.extend(preds.cpu().numpy())
+                labels_all.extend(y.cpu().numpy())
 
             train_loss = np.mean(losses)
             train_acc = accuracy_score(labels_all, preds_all)
@@ -170,7 +169,7 @@ def train_one_model(model_name, config, train_loader, test_loader):
 
 
 # ============================================================
-# MAIN (DIAGNOSTIC OVERFIT TEST)
+# MAIN ENTRY POINT
 # ============================================================
 def main():
 
@@ -179,6 +178,7 @@ def main():
 
     config = {
         "model": {
+            "type": "baseline",
             "vocab_size": 30522,
             "embed_dim": 128,
             "hidden_dim": 128,
@@ -187,11 +187,11 @@ def main():
         "training": {
             "lr": 0.001,
             "batch_size": 8,
-            "epochs": 10
+            "epochs": 3
         }
     }
 
-    print("Config loaded (DIAGNOSTIC MODE)")
+    print("Config loaded")
 
     tokenizer = SimpleTokenizer()
     vocab = Vocabulary()
@@ -202,30 +202,23 @@ def main():
     print("FULL TRAIN SIZE:", len(train_dataset))
     print("FULL TEST SIZE:", len(test_dataset))
 
-    # ========================================================
-    # OVERFIT SUBSET (DIAGNOSTIC TEST)
-    # ========================================================
-    train_subset = Subset(train_dataset, list(range(32)))
-    test_subset = Subset(test_dataset, list(range(32)))
-
     train_loader = DataLoader(
-        train_subset,
+        train_dataset,
         batch_size=config["training"]["batch_size"],
         shuffle=True,
         collate_fn=collate_fn
     )
 
     test_loader = DataLoader(
-        test_subset,
+        test_dataset,
         batch_size=config["training"]["batch_size"],
         shuffle=False,
         collate_fn=collate_fn
     )
 
-    # ========================================================
-    # TRAIN ALL MODELS IN REGISTRY
-    # ========================================================
-    for model_name in MODEL_REGISTRY:
+    models_to_train = ["baseline", "lstm", "gru"]
+
+    for model_name in models_to_train:
         train_one_model(model_name, config, train_loader, test_loader)
 
 

@@ -1,71 +1,51 @@
-"""
-Vocabulary Module
+# ============================================================
+# VOCABULARY MODULE (STABLE NLP INTERFACE)
+# ------------------------------------------------------------
+# PURPOSE:
+# Maps tokens ↔ integer IDs for NLP models.
+#
+# Provides:
+# - token → id mapping
+# - id → token mapping
+# - safe fallback handling
+# ============================================================
 
-This module builds and manages a vocabulary for NLP tasks.
-
-It performs two main functions:
-1. Build a mapping from tokens (words) to integer IDs.
-2. Convert tokenized text into numerical format (encoding) and back (decoding).
-
-Special tokens:
-- <PAD>: used for padding sequences in batching
-- <UNK>: used for unknown/unseen words
-"""
 
 class Vocabulary:
+
     def __init__(self):
-        # token → id mapping
-        self.stoi = {
-            "<PAD>": 0,
-            "<UNK>": 1
-        }
 
-        # id → token mapping
-        self.itos = {
-            0: "<PAD>",
-            1: "<UNK>"
-        }
+        self.token_to_id = {}
+        self.id_to_token = {}
 
-    def build(self, tokenized_texts):
-        """
-        Builds vocabulary from a list of tokenized sentences.
+        # Reserve special token for unknown words
+        self.pad_token = "<PAD>"
+        self.unk_token = "<UNK>"
 
-        Args:
-            tokenized_texts (list[list[str]]): list of tokenized sentences
-        """
-        for tokens in tokenized_texts:
-            for token in tokens:
-                if token not in self.stoi:
-                    idx = len(self.stoi)
-                    self.stoi[token] = idx
-                    self.itos[idx] = token
+        self.add_token(self.pad_token)
+        self.add_token(self.unk_token)
 
-    def encode(self, tokens):
-        """
-        Converts a list of tokens into a list of integer IDs.
+    def add_token(self, token):
 
-        Args:
-            tokens (list[str])
+        if token not in self.token_to_id:
 
-        Returns:
-            list[int]
-        """
-        return [self.stoi.get(token, self.stoi["<UNK>"]) for token in tokens]
+            idx = len(self.token_to_id)
 
-    def decode(self, ids):
-        """
-        Converts a list of IDs back into tokens.
+            self.token_to_id[token] = idx
+            self.id_to_token[idx] = token
 
-        Args:
-            ids (list[int])
+    def build(self, token_list):
 
-        Returns:
-            list[str]
-        """
-        return [self.itos.get(i, "<UNK>") for i in ids]
+        for token in token_list:
+            self.add_token(token)
 
-    def vocab_size(self):
-        """
-        Returns total vocabulary size.
-        """
-        return len(self.stoi)
+    # ========================================================
+    # CRITICAL FIX: compatibility method
+    # ========================================================
+    def get(self, token):
+
+        return self.token_to_id.get(token, self.token_to_id[self.unk_token])
+
+    def decode(self, idx):
+
+        return self.id_to_token.get(idx, self.unk_token)
