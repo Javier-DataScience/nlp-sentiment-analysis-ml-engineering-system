@@ -1,4 +1,4 @@
-pip install numpy pandas scikit-learn
+pip install pandas scikit-learn
 pip install torch transformers mlflow dvc fastapi uvicorn pydantic pyyaml pytest streamlit gradio
 
 pip install jupyterlab

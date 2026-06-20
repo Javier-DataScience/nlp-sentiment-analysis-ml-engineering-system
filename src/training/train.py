@@ -22,6 +22,7 @@
 # MODELS TRAINED:
 # - baseline
 # - lstm
+# - gru
 #
 # NOTE:
 # Each model is trained sequentially and logged as a
@@ -227,7 +228,11 @@ def main():
         collate_fn=collate_fn
     )
 
-    models_to_train = ["baseline", "lstm"]
+    models_to_train = [
+    "baseline",
+    "lstm",
+    "gru"
+    ]
 
     for model_name in models_to_train:
         train_one_model(model_name, config, train_loader, test_loader)
