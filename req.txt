@@ -15,3 +15,4 @@ pip install mlflow
 
 pip install -e .
 pip install datasets
+pip install -U email-validator

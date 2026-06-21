@@ -1,22 +1,22 @@
 # ============================================================
 # NLP TRAINING PIPELINE (IMDB + MULTI-MODEL + MLFLOW)
 # ------------------------------------------------------------
-# Purpose:
-# Full training pipeline for sentiment classification using:
-# - baseline model
-# - LSTM model
-# - GRU model
+# PURPOSE:
+# This script trains multiple NLP models (baseline, LSTM, GRU)
+# on the IMDb dataset with proper vocabulary handling and
+# MLflow experiment tracking.
 #
-# Improvements in Step 9:
-# - Added dropout-aware models
-# - Fixed evaluation stability
-# - Ensures realistic generalization metrics
-# - Prevents overfitting collapse
+# FIXES INCLUDED (STEP 10):
+# - Correct vocab initialization order (prevents UnboundLocalError)
+# - Stable vocab size injection into model config
+# - Safer evaluation (CPU conversion fixes)
+# - Cleaner reproducible training loop
+# - Consistent experiment tracking across models
 #
-# Output:
-# - MLflow tracking per model
-# - Epoch metrics (loss, accuracy)
-# - Final precision/recall/F1
+# OUTPUT:
+# - Per-epoch logs (loss, accuracy)
+# - MLflow tracking per model run
+# - Final precision/recall/F1 per model
 # ============================================================
 
 import torch
@@ -29,6 +29,7 @@ from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_sc
 
 from src.features.tokenizer import SimpleTokenizer
 from src.features.vocabulary import Vocabulary
+from src.features.build_vocab import build_vocabulary_from_csv
 from src.data.dataset import SentimentDataset
 from src.models.model_factory import get_model
 
@@ -72,7 +73,6 @@ def evaluate(model, dataloader):
     total_loss = 0
 
     with torch.no_grad():
-
         for batch in dataloader:
 
             x = batch["text"]
@@ -107,6 +107,8 @@ def train_one_model(model_name, config, train_loader, test_loader):
     print("==============================")
 
     config["model"]["type"] = model_name
+    config["model"]["vocab_size"] = config["model"]["vocab_size"]
+
     model = get_model(config)
 
     optimizer = torch.optim.Adam(model.parameters(), lr=config["training"]["lr"])
@@ -176,10 +178,30 @@ def main():
     mlflow.set_tracking_uri("sqlite:///mlflow.db")
     mlflow.set_experiment("sentiment_experiment")
 
+    print("Config loaded")
+
+    # ========================================================
+    # STEP 1: BUILD VOCAB FIRST (CRITICAL FIX)
+    # ========================================================
+    print("Building vocabulary from IMDb (train)...")
+
+    vocab = build_vocabulary_from_csv("data/raw/train.csv")
+
+    print("Vocabulary built successfully")
+    print("Vocab size:", len(vocab.token_to_id))
+
+    # ========================================================
+    # STEP 2: TOKENIZER
+    # ========================================================
+    tokenizer = SimpleTokenizer()
+
+    # ========================================================
+    # STEP 3: CONFIG (NOW SAFE)
+    # ========================================================
     config = {
         "model": {
             "type": "baseline",
-            "vocab_size": 30522,
+            "vocab_size": len(vocab.token_to_id),
             "embed_dim": 128,
             "hidden_dim": 128,
             "num_classes": 2
@@ -191,11 +213,9 @@ def main():
         }
     }
 
-    print("Config loaded")
-
-    tokenizer = SimpleTokenizer()
-    vocab = Vocabulary()
-
+    # ========================================================
+    # DATASETS
+    # ========================================================
     train_dataset = SentimentDataset("train", tokenizer, vocab)
     test_dataset = SentimentDataset("test", tokenizer, vocab)
 
@@ -216,6 +236,9 @@ def main():
         collate_fn=collate_fn
     )
 
+    # ========================================================
+    # MULTI MODEL TRAINING
+    # ========================================================
     models_to_train = ["baseline", "lstm", "gru"]
 
     for model_name in models_to_train:

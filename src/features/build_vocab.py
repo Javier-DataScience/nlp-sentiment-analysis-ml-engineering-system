@@ -1,62 +1,84 @@
-"""
-build_vocab.py
+# ============================================================
+# VOCABULARY BUILDER (PRODUCTION + TRAINING COMPATIBLE)
+# ------------------------------------------------------------
+# PURPOSE:
+# Builds a clean vocabulary from the IMDb dataset using HuggingFace.
+#
+# KEY FEATURES:
+# - Stable deterministic vocabulary creation
+# - Frequency filtering (min_freq)
+# - Compatible with SentimentDataset + training pipeline
+# - Safe importable function for training scripts
+#
+# OUTPUT:
+# - Vocabulary object ready for model embedding layers
+# ============================================================
 
-This script builds a full vocabulary from the IMDB training dataset.
-It replaces toy vocab construction and ensures that most words are NOT mapped to <UNK>.
-
-It uses:
-- SimpleTokenizer to tokenize text
-- Vocabulary class to store word-to-index mapping
-
-Output:
-- vocab object that can be saved and reused in dataset pipeline
-"""
-
-import pandas as pd
 from collections import Counter
+from datasets import load_dataset
 
 from src.features.tokenizer import SimpleTokenizer
 from src.features.vocabulary import Vocabulary
 
 
-def build_vocabulary_from_csv(csv_path, min_freq=2):
+def build_vocabulary_from_csv(csv_path=None, split="train", min_freq=2):
     """
-    Builds a vocabulary from IMDB training data.
+    Vocabulary builder (compatible interface for training pipeline).
+
+    NOTE:
+    - csv_path kept for backward compatibility (ignored if None)
+    - primary source is HuggingFace IMDb dataset
 
     Args:
-        csv_path (str): path to train.csv
-        min_freq (int): minimum frequency for a word to be included
+        csv_path (str): optional legacy argument (ignored)
+        split (str): "train" or "test"
+        min_freq (int): minimum token frequency threshold
 
     Returns:
         Vocabulary: fitted vocabulary object
     """
 
-    df = pd.read_csv(csv_path)
+    print(f"Building vocabulary from IMDb ({split})...")
+
+    dataset = load_dataset("imdb")[split]
 
     tokenizer = SimpleTokenizer()
-
     counter = Counter()
 
-    # Step 1: tokenize all texts and count words
-    for text in df["text"]:
-        tokens = tokenizer.tokenize(text)
+    # ========================================================
+    # STEP 1: TOKENIZE ENTIRE CORPUS
+    # ========================================================
+    for item in dataset:
+        tokens = tokenizer.tokenize(item["text"])
         counter.update(tokens)
 
-    # Step 2: filter by frequency
+    # ========================================================
+    # STEP 2: FILTER LOW-FREQUENCY TOKENS
+    # ========================================================
     filtered_tokens = [
         token for token, freq in counter.items()
         if freq >= min_freq
     ]
 
-    # Step 3: build vocabulary
+    # ========================================================
+    # STEP 3: BUILD VOCABULARY
+    # ========================================================
     vocab = Vocabulary()
-    vocab.build([tokenizer.tokenize(text) for text in df["text"]])  # single corpus list
+    vocab.build(filtered_tokens)
+
+    print("Vocabulary built successfully")
+    print("Vocab size:", len(vocab.token_to_id))
 
     return vocab
 
 
+# ============================================================
+# LOCAL DEBUG TEST
+# ============================================================
 if __name__ == "__main__":
-    vocab = build_vocabulary_from_csv("data/raw/train.csv")
 
-    print("Vocab size:", len(vocab.stoi))
-    print("Sample vocab:", list(vocab.stoi.items())[:20])
+    vocab = build_vocabulary_from_csv(split="train")
+
+    sample = list(vocab.token_to_id.items())[:20]
+
+    print("Sample vocab:", sample)

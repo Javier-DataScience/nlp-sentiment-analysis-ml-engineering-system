@@ -1,69 +1,68 @@
 # ============================================================
-# MODEL RANKING SYSTEM (PRODUCTION STYLE - MLFLOW)
+# MODEL RANKER (SINGLE SOURCE OF TRUTH FOR MODEL SELECTION)
 # ------------------------------------------------------------
-# Purpose:
-# This module reads MLflow experiment runs and produces a
-# clean, de-duplicated model leaderboard.
+# PURPOSE:
+# This module defines how models are compared and selected.
 #
-# It is designed for:
-# - model comparison
-# - best model selection
-# - MLOps-ready evaluation logic
+# DESIGN PRINCIPLES:
+# - One primary metric (F1-score)
+# - Deterministic ranking
+# - Clean MLflow integration
+# - No duplicated logic across scripts
 #
-# Key features:
-# - removes duplicate runs
-# - groups by model name
-# - aggregates metrics
-# - ranks using F1 score (primary metric)
+# OUTPUT:
+# - Ranked leaderboard of all experiments
+# - Best model selection
 # ============================================================
 
-import mlflow
 import pandas as pd
+import mlflow
 
 
 # ============================================================
-# LOAD ALL RUNS FROM EXPERIMENT
+# CONFIGURATION (SINGLE SOURCE OF TRUTH)
 # ============================================================
-def load_runs(experiment_name="sentiment_experiment"):
+PRIMARY_METRIC = "f1"
+SECONDARY_METRICS = ["accuracy", "loss"]
+
+
+# ============================================================
+# LOAD EXPERIMENTS FROM MLFLOW
+# ============================================================
+def load_experiments():
+
+    print("\nLoading MLflow runs...\n")
 
     client = mlflow.tracking.MlflowClient()
+    experiment = client.get_experiment_by_name("sentiment_experiment")
 
-    experiment = client.get_experiment_by_name(experiment_name)
+    runs = client.search_runs(experiment_ids=[experiment.experiment_id])
 
-    if experiment is None:
-        raise ValueError(f"Experiment '{experiment_name}' not found")
-
-    runs = client.search_runs(experiment.experiment_id)
-
-    rows = []
+    data = []
 
     for run in runs:
+        metrics = run.data.metrics
 
-        data = run.data.metrics
-
-        rows.append({
+        data.append({
             "run_id": run.info.run_id,
             "model": run.data.tags.get("mlflow.runName", "unknown"),
-            "accuracy": data.get("test_accuracy"),
-            "f1": data.get("f1"),
-            "precision": data.get("precision"),
-            "recall": data.get("recall"),
-            "loss": data.get("test_loss"),
+            "accuracy": metrics.get("test_accuracy", 0),
+            "f1": metrics.get("f1", 0),
+            "precision": metrics.get("precision", 0),
+            "recall": metrics.get("recall", 0),
+            "loss": metrics.get("test_loss", 0),
         })
 
-    return pd.DataFrame(rows)
+    return pd.DataFrame(data)
 
 
 # ============================================================
-# CLEAN DUPLICATES + INVALID RUNS
+# CLEAN + DEDUPLICATE RESULTS
 # ============================================================
 def clean_data(df):
 
-    # Remove rows with missing critical metrics
-    df = df.dropna(subset=["f1", "accuracy"])
-
-    # Keep only best run per model (by F1)
-    df = df.sort_values("f1", ascending=False)
+    # keep best run per model (by PRIMARY_METRIC)
+    df = df.sort_values(PRIMARY_METRIC, ascending=False)
     df = df.drop_duplicates(subset=["model"], keep="first")
 
     return df
@@ -74,18 +73,23 @@ def clean_data(df):
 # ============================================================
 def rank_models(df):
 
-    df = df.sort_values(by="f1", ascending=False).reset_index(drop=True)
+    df = df.sort_values(PRIMARY_METRIC, ascending=False).reset_index(drop=True)
     df["rank"] = df.index + 1
 
     return df
 
 
 # ============================================================
-# BEST MODEL SELECTOR
+# SELECT BEST MODEL
 # ============================================================
-def get_best_model(df):
+def select_best_model(df):
 
-    return df.iloc[0]
+    best = df.iloc[0]
+
+    print("\nBEST MODEL:")
+    print(best)
+
+    return best
 
 
 # ============================================================
@@ -93,24 +97,19 @@ def get_best_model(df):
 # ============================================================
 if __name__ == "__main__":
 
-    print("\nLoading MLflow runs...")
-
-    df = load_runs()
+    df = load_experiments()
 
     print("\nRAW DATA:")
     print(df)
 
     df = clean_data(df)
 
-    print("\nCLEAN DATA (DEDUP + FILTERED):")
+    print("\nCLEAN DATA:")
     print(df)
 
-    ranked = rank_models(df)
+    df = rank_models(df)
 
-    print("\nFINAL LEADERBOARD (RANKED BY F1):")
-    print(ranked)
+    print("\nFINAL LEADERBOARD:")
+    print(df)
 
-    best = get_best_model(ranked)
-
-    print("\nBEST MODEL:")
-    print(best)
+    best = select_best_model(df)
