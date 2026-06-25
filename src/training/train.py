@@ -239,7 +239,13 @@ def main():
     # ========================================================
     # MULTI MODEL TRAINING
     # ========================================================
-    models_to_train = ["baseline", "lstm", "gru"]
+    models_to_train = [
+    "baseline",
+    "lstm",
+    "gru",
+    "cnn",
+    "bilstm",
+    ]
 
     for model_name in models_to_train:
         train_one_model(model_name, config, train_loader, test_loader)
