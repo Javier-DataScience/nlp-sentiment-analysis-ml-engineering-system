@@ -1,35 +1,50 @@
 # ============================================================
-# MODEL RANKER (PRODUCTION-READY VERSION)
+# MODEL RANKER (PRODUCTION-READY VERSION WITH CHAMPION LOCKING)
 # ------------------------------------------------------------
 # PURPOSE:
 # Loads MLflow experiments and produces a clean leaderboard.
+# Automatically selects and persists the champion model.
 #
 # FEATURES:
-# - Reads all runs from the sentiment experiment
-# - Removes invalid experiments (accuracy = 0 or accuracy = 1)
-# - Keeps only the best run per model
-# - Uses a centralized PRIMARY_METRIC from config/constants.py
-# - Produces a final ranked leaderboard
+# - Reads MLflow runs
+# - Cleans invalid runs
+# - Ranks models using PRIMARY_METRIC (F1)
+# - Persists champion model to artifacts/champion.json
+# - Ensures reproducibility for inference layer
 #
-# CURRENT PRIMARY METRIC:
-# - F1 Score
-#
-# FUTURE:
-# Changing the ranking metric only requires modifying:
-#
-#     src/config/constants.py
-#
-# Example:
-#
-#     PRIMARY_METRIC = "accuracy"
-#     PRIMARY_METRIC = "recall"
-#     PRIMARY_METRIC = "precision"
+# CRITICAL DESIGN PRINCIPLE:
+# Champion selection MUST be deterministic and persisted.
 # ============================================================
 
 import mlflow
 import pandas as pd
+import json
+import os
 
 from src.config.constants import PRIMARY_METRIC
+
+
+CHAMPION_PATH = "artifacts/champion.json"
+
+
+def save_champion(row: pd.Series):
+    """
+    Persist champion model metadata for inference use.
+    """
+
+    os.makedirs("artifacts", exist_ok=True)
+
+    champion_data = {
+        "model": row["model"],
+        "run_id": row["run_id"],
+        "metric": PRIMARY_METRIC,
+        "score": float(row[PRIMARY_METRIC])
+    }
+
+    with open(CHAMPION_PATH, "w") as f:
+        json.dump(champion_data, f, indent=4)
+
+    print(f"\nChampion saved to {CHAMPION_PATH}")
 
 
 def main():
@@ -52,7 +67,7 @@ def main():
 
     columns = [
         "run_id",
-        "params.model",
+        "params.model_type",
         "metrics.test_accuracy",
         "metrics.f1",
         "metrics.precision",
@@ -60,7 +75,10 @@ def main():
         "metrics.test_loss"
     ]
 
-    runs = runs[columns]
+    # Keep only available columns safely
+    available_columns = runs.columns.tolist()
+    valid_columns = [c for c in columns if c in available_columns]
+    runs = runs[valid_columns]
 
     runs.columns = [
         "run_id",
@@ -76,7 +94,7 @@ def main():
     print(runs)
 
     # ========================================================
-    # REMOVE BROKEN / DIAGNOSTIC RUNS
+    # CLEANING
     # ========================================================
     clean_df = runs.copy()
 
@@ -86,7 +104,7 @@ def main():
     ]
 
     # ========================================================
-    # KEEP BEST RUN PER MODEL
+    # RANKING
     # ========================================================
     clean_df = clean_df.sort_values(
         PRIMARY_METRIC,
@@ -98,12 +116,6 @@ def main():
         as_index=False
     ).first()
 
-    print("\nCLEAN DATA:")
-    print(clean_df)
-
-    # ========================================================
-    # FINAL LEADERBOARD
-    # ========================================================
     leaderboard = clean_df.sort_values(
         PRIMARY_METRIC,
         ascending=False
@@ -111,14 +123,18 @@ def main():
 
     leaderboard["rank"] = leaderboard.index + 1
 
-    print(
-        f"\nFINAL LEADERBOARD (RANKED BY {PRIMARY_METRIC.upper()}):"
-    )
+    print("\nFINAL LEADERBOARD:")
     print(leaderboard)
 
-    print("\nBEST MODEL:")
+    best_model = leaderboard.iloc[0]
 
-    print(leaderboard.iloc[0])
+    print("\nBEST MODEL:")
+    print(best_model)
+
+    # ========================================================
+    # CHAMPION LOCKING
+    # ========================================================
+    save_champion(best_model)
 
 
 if __name__ == "__main__":
