@@ -58,11 +58,7 @@ def test_dataset():
     # ========================================================
     # CREATE DATASET
     # ========================================================
-    dataset = SentimentDataset(
-        split="train",
-        tokenizer=tokenizer,
-        vocab=vocab
-    )
+    dataset = SentimentDataset(split="train", tokenizer=tokenizer, vocab=vocab)
 
     sample = dataset[0]
 

@@ -30,7 +30,7 @@ def test_model_factory():
             "type": "baseline",
             "vocab_size": 5000,
             "embed_dim": 128,
-            "num_classes": 2
+            "num_classes": 2,
         }
     }
 

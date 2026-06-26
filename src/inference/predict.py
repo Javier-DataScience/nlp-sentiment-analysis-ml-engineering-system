@@ -45,7 +45,6 @@ import torch.nn.functional as F
 from src.features.tokenizer import SimpleTokenizer
 from src.models.model_factory import get_model
 
-
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
@@ -174,18 +173,12 @@ def preprocess_text(text):
 
     tokens = TOKENIZER.tokenize(text)
 
-    token_ids = [
-        VOCAB.get(token)
-        for token in tokens
-    ]
+    token_ids = [VOCAB.get(token) for token in tokens]
 
     if len(token_ids) == 0:
         token_ids = [VOCAB.get(VOCAB.unk_token)]
 
-    tensor = torch.tensor(
-        token_ids,
-        dtype=torch.long
-    )
+    tensor = torch.tensor(token_ids, dtype=torch.long)
 
     tensor = tensor.unsqueeze(0)
 
@@ -215,23 +208,13 @@ def predict_text(text):
 
         logits = MODEL(inputs)
 
-        probabilities = F.softmax(
-            logits,
-            dim=1
-        )
+        probabilities = F.softmax(logits, dim=1)
 
-        confidence, prediction = torch.max(
-            probabilities,
-            dim=1
-        )
+        confidence, prediction = torch.max(probabilities, dim=1)
 
     prediction_id = prediction.item()
 
-    sentiment = (
-        "negative"
-        if prediction_id == 0
-        else "positive"
-    )
+    sentiment = "negative" if prediction_id == 0 else "positive"
 
     return {
         "prediction": sentiment,

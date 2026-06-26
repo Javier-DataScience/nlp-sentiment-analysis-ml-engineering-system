@@ -50,7 +50,8 @@ class SentimentDataset(Dataset):
 
         # 2. convert to ids (IMPORTANT FIX)
         token_ids = [
-            self.vocab.get(token) for token in tokens
+            self.vocab.get(token)
+            for token in tokens
             if self.vocab.get(token) is not None
         ]
 
@@ -60,5 +61,5 @@ class SentimentDataset(Dataset):
 
         return {
             "text": torch.tensor(token_ids, dtype=torch.long),
-            "label": torch.tensor(label, dtype=torch.long)
+            "label": torch.tensor(label, dtype=torch.long),
         }

@@ -23,7 +23,6 @@ import os
 
 from src.config.constants import PRIMARY_METRIC
 
-
 CHAMPION_PATH = "artifacts/champion.json"
 
 
@@ -38,7 +37,7 @@ def save_champion(row: pd.Series):
         "model": row["model"],
         "run_id": row["run_id"],
         "metric": PRIMARY_METRIC,
-        "score": float(row[PRIMARY_METRIC])
+        "score": float(row[PRIMARY_METRIC]),
     }
 
     with open(CHAMPION_PATH, "w") as f:
@@ -51,9 +50,7 @@ def main():
 
     mlflow.set_tracking_uri("sqlite:///mlflow.db")
 
-    experiment = mlflow.get_experiment_by_name(
-        "sentiment_experiment"
-    )
+    experiment = mlflow.get_experiment_by_name("sentiment_experiment")
 
     if experiment is None:
         print("Experiment not found.")
@@ -61,9 +58,7 @@ def main():
 
     print("\nLoading MLflow runs...\n")
 
-    runs = mlflow.search_runs(
-        experiment_ids=[experiment.experiment_id]
-    )
+    runs = mlflow.search_runs(experiment_ids=[experiment.experiment_id])
 
     columns = [
         "run_id",
@@ -72,7 +67,7 @@ def main():
         "metrics.f1",
         "metrics.precision",
         "metrics.recall",
-        "metrics.test_loss"
+        "metrics.test_loss",
     ]
 
     # Keep only available columns safely
@@ -80,15 +75,7 @@ def main():
     valid_columns = [c for c in columns if c in available_columns]
     runs = runs[valid_columns]
 
-    runs.columns = [
-        "run_id",
-        "model",
-        "accuracy",
-        "f1",
-        "precision",
-        "recall",
-        "loss"
-    ]
+    runs.columns = ["run_id", "model", "accuracy", "f1", "precision", "recall", "loss"]
 
     print("\nRAW DATA:")
     print(runs)
@@ -98,28 +85,18 @@ def main():
     # ========================================================
     clean_df = runs.copy()
 
-    clean_df = clean_df[
-        (clean_df["accuracy"] > 0.0)
-        & (clean_df["accuracy"] < 1.0)
-    ]
+    clean_df = clean_df[(clean_df["accuracy"] > 0.0) & (clean_df["accuracy"] < 1.0)]
 
     # ========================================================
     # RANKING
     # ========================================================
-    clean_df = clean_df.sort_values(
-        PRIMARY_METRIC,
-        ascending=False
+    clean_df = clean_df.sort_values(PRIMARY_METRIC, ascending=False)
+
+    clean_df = clean_df.groupby("model", as_index=False).first()
+
+    leaderboard = clean_df.sort_values(PRIMARY_METRIC, ascending=False).reset_index(
+        drop=True
     )
-
-    clean_df = clean_df.groupby(
-        "model",
-        as_index=False
-    ).first()
-
-    leaderboard = clean_df.sort_values(
-        PRIMARY_METRIC,
-        ascending=False
-    ).reset_index(drop=True)
 
     leaderboard["rank"] = leaderboard.index + 1
 

@@ -45,7 +45,6 @@ from pydantic import BaseModel
 
 from src.inference.predict import predict_text
 
-
 # ============================================================
 # FASTAPI APPLICATION
 # ============================================================
@@ -61,6 +60,7 @@ app = FastAPI(
 # REQUEST SCHEMA
 # ============================================================
 
+
 class PredictionRequest(BaseModel):
     text: str
 
@@ -68,6 +68,7 @@ class PredictionRequest(BaseModel):
 # ============================================================
 # ROOT ENDPOINT
 # ============================================================
+
 
 @app.get("/")
 def root():
@@ -83,17 +84,17 @@ def root():
 # HEALTH CHECK
 # ============================================================
 
+
 @app.get("/health")
 def health_check():
 
-    return {
-        "status": "healthy"
-    }
+    return {"status": "healthy"}
 
 
 # ============================================================
 # PREDICTION ENDPOINT
 # ============================================================
+
 
 @app.post("/predict")
 def predict(request: PredictionRequest):

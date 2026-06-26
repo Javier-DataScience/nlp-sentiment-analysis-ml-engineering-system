@@ -13,6 +13,7 @@ Output is a list of clean tokens that can be used by the Vocabulary module.
 
 import re
 
+
 class SimpleTokenizer:
     def __init__(self):
         pass

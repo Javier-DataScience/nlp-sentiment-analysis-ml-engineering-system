@@ -52,16 +52,11 @@ def collate_batch(batch):
     labels = [item["label"] for item in batch]
 
     # Ensure we work with lists internally
-    texts = [
-        t.tolist() if isinstance(t, torch.Tensor) else t
-        for t in texts
-    ]
+    texts = [t.tolist() if isinstance(t, torch.Tensor) else t for t in texts]
 
     max_len = max(len(t) for t in texts)
 
-    padded_texts = [
-        pad_sequence(t, max_len) for t in texts
-    ]
+    padded_texts = [pad_sequence(t, max_len) for t in texts]
 
     # Convert to tensors
     text_tensor = torch.tensor(padded_texts, dtype=torch.long)
@@ -72,7 +67,4 @@ def collate_batch(batch):
     else:
         label_tensor = torch.tensor(labels, dtype=torch.long)
 
-    return {
-        "text": text_tensor,
-        "labels": label_tensor
-    }
+    return {"text": text_tensor, "labels": label_tensor}

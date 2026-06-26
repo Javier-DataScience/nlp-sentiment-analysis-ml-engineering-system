@@ -55,10 +55,7 @@ def build_vocabulary_from_csv(csv_path=None, split="train", min_freq=2):
     # ========================================================
     # STEP 2: FILTER LOW-FREQUENCY TOKENS
     # ========================================================
-    filtered_tokens = [
-        token for token, freq in counter.items()
-        if freq >= min_freq
-    ]
+    filtered_tokens = [token for token, freq in counter.items() if freq >= min_freq]
 
     # ========================================================
     # STEP 3: BUILD VOCABULARY

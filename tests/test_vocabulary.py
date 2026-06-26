@@ -35,7 +35,7 @@ def test_vocabulary():
     tokens = [
         ["i", "love", "this", "movie"],
         ["this", "movie", "is", "great"],
-        ["i", "hate", "this", "film"]
+        ["i", "hate", "this", "film"],
     ]
 
     counter = Counter()
