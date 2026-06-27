@@ -45,11 +45,13 @@ if "history" not in st.session_state:
 # LOAD ARTIFACTS
 # =========================
 
+
 def load_json(path):
     if path.exists():
         with open(path, "r") as f:
             return json.load(f)
     return {}
+
 
 champion = load_json(CHAMPION_PATH)
 metrics = load_json(METRICS_PATH)
@@ -108,11 +110,13 @@ if st.button("Predict"):
         confidence = result.get("confidence", 0.0)
 
         # STORE HISTORY
-        st.session_state.history.append({
-            "text": user_input,
-            "prediction": prediction,
-            "confidence": confidence,
-        })
+        st.session_state.history.append(
+            {
+                "text": user_input,
+                "prediction": prediction,
+                "confidence": confidence,
+            }
+        )
 
         # OUTPUT
         if prediction == "error":
@@ -135,8 +139,6 @@ if len(st.session_state.history) == 0:
     st.info("No predictions yet.")
 else:
     for i, item in enumerate(reversed(st.session_state.history), 1):
-        st.markdown(
-            f"### {i}. {item['prediction'].upper()} ({item['confidence']:.2f})"
-        )
+        st.markdown(f"### {i}. {item['prediction'].upper()} ({item['confidence']:.2f})")
         st.write(item["text"])
         st.divider()

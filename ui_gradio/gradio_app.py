@@ -35,11 +35,13 @@ client = SentimentAPIClient()
 # LOAD ARTIFACTS
 # =========================
 
+
 def load_json(path):
     if path.exists():
         with open(path, "r") as f:
             return json.load(f)
     return {}
+
 
 champion = load_json(CHAMPION_PATH)
 metrics = load_json(METRICS_PATH)
@@ -47,6 +49,7 @@ metrics = load_json(METRICS_PATH)
 # =========================
 # INFERENCE FUNCTION (UPDATED)
 # =========================
+
 
 def predict(text, history):
     if not text or text.strip() == "":
@@ -58,17 +61,15 @@ def predict(text, history):
     prediction = result.get("prediction", "unknown")
     confidence = result.get("confidence", 0.0)
 
-    history.append({
-        "text": text,
-        "prediction": prediction,
-        "confidence": confidence
-    })
+    history.append({"text": text, "prediction": prediction, "confidence": confidence})
 
     return f"{prediction.upper()} ({confidence:.2f})", history
+
 
 # =========================
 # HISTORY FORMATTER
 # =========================
+
 
 def format_history(history):
     if not history:
@@ -81,6 +82,7 @@ def format_history(history):
             f"   {item['text']}\n\n"
         )
     return output
+
 
 # =========================
 # GRADIO APP (UNCHANGED UI)
@@ -141,24 +143,16 @@ with gr.Blocks(theme=gr.themes.Soft()) as app:
             gr.Markdown("## 📝 Enter Text")
 
             text_input = gr.Textbox(
-                placeholder="Type a movie review...",
-                lines=5,
-                label=None
+                placeholder="Type a movie review...", lines=5, label=None
             )
 
             btn = gr.Button("Predict", variant="primary")
 
-            output = gr.Textbox(
-                label="Prediction Result",
-                interactive=False
-            )
+            output = gr.Textbox(label="Prediction Result", interactive=False)
 
             gr.Markdown("## 📜 Prediction History")
 
-            history_box = gr.Textbox(
-                lines=10,
-                interactive=False
-            )
+            history_box = gr.Textbox(lines=10, interactive=False)
 
             # =========================
             # EVENTS
@@ -167,20 +161,12 @@ with gr.Blocks(theme=gr.themes.Soft()) as app:
             btn.click(
                 fn=predict,
                 inputs=[text_input, history_state],
-                outputs=[output, history_state]
-            ).then(
-                fn=format_history,
-                inputs=[history_state],
-                outputs=[history_box]
-            )
+                outputs=[output, history_state],
+            ).then(fn=format_history, inputs=[history_state], outputs=[history_box])
 
 # =========================
 # LAUNCH
 # =========================
 
 if __name__ == "__main__":
-    app.launch(
-        server_name="127.0.0.1",
-        server_port=7860,
-        inbrowser=True
-    )
+    app.launch(server_name="127.0.0.1", server_port=7860, inbrowser=True)

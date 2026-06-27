@@ -70,6 +70,7 @@ app = FastAPI(
 # REQUEST SCHEMA
 # ============================================================
 
+
 class PredictionRequest(BaseModel):
     text: str
 
@@ -77,6 +78,7 @@ class PredictionRequest(BaseModel):
 # ============================================================
 # OPTIONAL: MODEL WARMUP (PLACEHOLDER FOR FUTURE OPTIMIZATION)
 # ============================================================
+
 
 @app.on_event("startup")
 def startup_event():
@@ -98,6 +100,7 @@ def startup_event():
 # ROOT ENDPOINT
 # ============================================================
 
+
 @app.get("/")
 def root():
     return {
@@ -111,6 +114,7 @@ def root():
 # HEALTH CHECK
 # ============================================================
 
+
 @app.get("/health")
 def health_check():
     return {"status": "healthy"}
@@ -119,6 +123,7 @@ def health_check():
 # ============================================================
 # PREDICTION ENDPOINT
 # ============================================================
+
 
 @app.post("/predict")
 def predict(request: PredictionRequest):
@@ -129,5 +134,5 @@ def predict(request: PredictionRequest):
     return {
         "input": request.text,
         "prediction": result.get("prediction"),
-        "confidence": result.get("confidence")
+        "confidence": result.get("confidence"),
     }
