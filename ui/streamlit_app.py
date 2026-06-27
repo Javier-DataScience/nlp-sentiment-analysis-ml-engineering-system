@@ -39,11 +39,13 @@ if "history" not in st.session_state:
 # LOAD ARTIFACTS
 # =========================
 
+
 def load_json(path):
     if path.exists():
         with open(path, "r") as f:
             return json.load(f)
     return {}
+
 
 champion = load_json(CHAMPION_PATH)
 metrics = load_json(METRICS_PATH)
@@ -53,6 +55,7 @@ metrics = load_json(METRICS_PATH)
 # =========================
 
 API_URL = "http://localhost:8000/predict"
+
 
 def predict_sentiment(text: str):
     try:
@@ -68,6 +71,7 @@ def predict_sentiment(text: str):
             "confidence": 0.0,
             "error": str(e),
         }
+
 
 # =========================
 # UI LAYOUT
