@@ -13,7 +13,6 @@
 # - Fully connected classifier
 # ============================================================
 
-import torch
 import torch.nn as nn
 
 
@@ -26,9 +25,7 @@ class LSTMModel(nn.Module):
         self.embedding = nn.Embedding(vocab_size, embed_dim)
 
         self.lstm = nn.LSTM(
-            input_size=embed_dim,
-            hidden_size=hidden_dim,
-            batch_first=True
+            input_size=embed_dim, hidden_size=hidden_dim, batch_first=True
         )
 
         self.dropout = nn.Dropout(0.3)

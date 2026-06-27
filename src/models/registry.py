@@ -43,7 +43,6 @@ from src.models.gru_model import GRUModel
 from src.models.cnn_model import CNNModel
 from src.models.bilstm_model import BiLSTMModel
 
-
 MODEL_REGISTRY = [
     "baseline",
     "lstm",
@@ -117,6 +116,5 @@ def get_model_by_name(name, config):
     else:
 
         raise ValueError(
-            f"Unknown model: {name}. "
-            f"Supported models: {MODEL_REGISTRY}"
+            f"Unknown model: {name}. " f"Supported models: {MODEL_REGISTRY}"
         )

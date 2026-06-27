@@ -5,15 +5,17 @@
 # Validates the SentimentDataset class used in the production
 # NLP pipeline.
 #
-# This test ensures:
-# - HuggingFace IMDb loading works
-# - tokenization works correctly
-# - vocabulary encoding works correctly
-# - output format matches training expectations
-# - tensors are returned for both text and labels
+# This version intentionally avoids external dependencies
+# (HuggingFace, internet access, IMDb downloads) so that:
+#
+# - CI remains deterministic
+# - Tests run offline
+# - Execution is fast
+# - No external services are required
 #
 # ARCHITECTURE:
-# Raw text
+#
+# Mock text
 #     ↓
 # Tokenizer
 #     ↓
@@ -31,47 +33,78 @@ import torch
 from src.data.dataset import SentimentDataset
 from src.features.tokenizer import SimpleTokenizer
 from src.features.vocabulary import Vocabulary
-from src.data.data_ingestion import load_imdb
 
 
 def test_dataset():
     """
-    Tests the complete dataset pipeline.
+    Tests the complete dataset pipeline using
+    deterministic local mock data.
     """
 
     tokenizer = SimpleTokenizer()
 
     # ========================================================
-    # BUILD A SMALL TEST VOCABULARY
+    # MOCK DATASET
     # ========================================================
-    texts, _ = load_imdb("train")
+    sample_data = [
+        ("this movie was fantastic", 1),
+        ("this movie was terrible", 0),
+        ("i absolutely loved this film", 1),
+        ("the acting was awful", 0),
+    ]
 
+    # ========================================================
+    # BUILD TEST VOCABULARY
+    # ========================================================
     counter = Counter()
 
-    # Only use a small subset to keep tests fast
-    for text in texts[:100]:
+    for text, _ in sample_data:
         counter.update(tokenizer.tokenize(text))
 
     vocab = Vocabulary()
+
     vocab.build(list(counter.keys()))
 
     # ========================================================
-    # CREATE DATASET
+    # MONKEY PATCH DATA LOADER
+    # --------------------------------------------------------
+    # Prevents the unit test from downloading IMDb from
+    # HuggingFace during CI execution.
     # ========================================================
-    dataset = SentimentDataset(split="train", tokenizer=tokenizer, vocab=vocab)
+    original_loader = SentimentDataset._load_data
 
-    sample = dataset[0]
+    SentimentDataset._load_data = lambda self, split: sample_data
 
-    # ========================================================
-    # ASSERTIONS
-    # ========================================================
-    assert "text" in sample
-    assert "label" in sample
+    try:
 
-    assert isinstance(sample["text"], torch.Tensor)
-    assert isinstance(sample["label"], torch.Tensor)
+        # ====================================================
+        # CREATE DATASET
+        # ====================================================
+        dataset = SentimentDataset(
+            split="train",
+            tokenizer=tokenizer,
+            vocab=vocab,
+        )
 
-    assert sample["text"].dtype == torch.long
-    assert sample["label"].dtype == torch.long
+        sample = dataset[0]
 
-    assert len(dataset) > 0
+        # ====================================================
+        # ASSERTIONS
+        # ====================================================
+        assert "text" in sample
+        assert "label" in sample
+
+        assert isinstance(sample["text"], torch.Tensor)
+        assert isinstance(sample["label"], torch.Tensor)
+
+        assert sample["text"].dtype == torch.long
+        assert sample["label"].dtype == torch.long
+
+        assert len(dataset) == len(sample_data)
+
+    finally:
+
+        # ====================================================
+        # RESTORE ORIGINAL IMPLEMENTATION
+        # ====================================================
+        SentimentDataset._load_data = original_loader

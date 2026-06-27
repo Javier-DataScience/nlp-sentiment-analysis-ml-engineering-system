@@ -22,7 +22,6 @@
 # hidden_dim * 2 (forward + backward states)
 # ============================================================
 
-import torch
 import torch.nn as nn
 
 

@@ -7,7 +7,6 @@ Simple sentiment classifier using:
 - Linear classifier
 """
 
-import torch
 import torch.nn as nn
 
 

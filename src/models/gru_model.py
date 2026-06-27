@@ -12,7 +12,6 @@
 # - Linear classification head
 # ============================================================
 
-import torch
 import torch.nn as nn
 
 
@@ -25,9 +24,7 @@ class GRUModel(nn.Module):
         self.embedding = nn.Embedding(vocab_size, embed_dim)
 
         self.gru = nn.GRU(
-            input_size=embed_dim,
-            hidden_size=hidden_dim,
-            batch_first=True
+            input_size=embed_dim, hidden_size=hidden_dim, batch_first=True
         )
 
         self.dropout = nn.Dropout(0.3)
