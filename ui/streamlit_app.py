@@ -1,17 +1,17 @@
 """
-Streamlit UI for NLP Sentiment Analysis System
+Streamlit UI for NLP Sentiment Analysis System (Refactored)
 
-Features:
-- Champion model display (from artifacts/champion.json)
-- Metrics dashboard (from artifacts/metrics.json)
-- Text sentiment prediction via FastAPI or local inference
-- Prediction history using session state (stateful UI)
+ARCHITECTURE:
+Streamlit → API Client → FastAPI → Model
+
+No direct inference logic in UI.
 """
 
 import streamlit as st
-import requests
 import json
 from pathlib import Path
+
+from src.client.api_client import SentimentAPIClient
 
 # =========================
 # CONFIG
@@ -29,7 +29,13 @@ CHAMPION_PATH = ARTIFACTS_PATH / "champion.json"
 METRICS_PATH = ARTIFACTS_PATH / "metrics.json"
 
 # =========================
-# SESSION STATE INIT
+# API CLIENT
+# =========================
+
+client = SentimentAPIClient()
+
+# =========================
+# SESSION STATE
 # =========================
 
 if "history" not in st.session_state:
@@ -39,48 +45,23 @@ if "history" not in st.session_state:
 # LOAD ARTIFACTS
 # =========================
 
-
 def load_json(path):
     if path.exists():
         with open(path, "r") as f:
             return json.load(f)
     return {}
 
-
 champion = load_json(CHAMPION_PATH)
 metrics = load_json(METRICS_PATH)
 
 # =========================
-# API CONFIG
-# =========================
-
-API_URL = "http://localhost:8000/predict"
-
-
-def predict_sentiment(text: str):
-    try:
-        response = requests.post(
-            API_URL,
-            json={"text": text},
-            timeout=10,
-        )
-        return response.json()
-    except Exception as e:
-        return {
-            "prediction": "error",
-            "confidence": 0.0,
-            "error": str(e),
-        }
-
-
-# =========================
-# UI LAYOUT
+# UI
 # =========================
 
 st.title("🤖 NLP Sentiment Analysis System")
 
 # =========================
-# SIDEBAR - CHAMPION + METRICS
+# SIDEBAR
 # =========================
 
 with st.sidebar:
@@ -119,34 +100,31 @@ if st.button("Predict"):
     if user_input.strip() == "":
         st.warning("Please enter some text.")
     else:
-        result = predict_sentiment(user_input)
+
+        # CALL API CLIENT
+        result = client.predict(user_input)
 
         prediction = result.get("prediction", "unknown")
         confidence = result.get("confidence", 0.0)
 
-        # =========================
-        # STORE IN HISTORY (STATE)
-        # =========================
+        # STORE HISTORY
+        st.session_state.history.append({
+            "text": user_input,
+            "prediction": prediction,
+            "confidence": confidence,
+        })
 
-        st.session_state.history.append(
-            {
-                "text": user_input,
-                "prediction": prediction,
-                "confidence": confidence,
-            }
-        )
-
-        # =========================
-        # DISPLAY RESULT
-        # =========================
-
-        st.success("Prediction completed")
-
-        st.markdown(f"### Prediction: `{prediction.upper()}`")
-        st.markdown(f"### Confidence: `{confidence:.2f}`")
+        # OUTPUT
+        if prediction == "error":
+            st.error("FastAPI request failed")
+            st.text(result.get("error"))
+        else:
+            st.success("Prediction completed")
+            st.markdown(f"### Prediction: `{prediction.upper()}`")
+            st.markdown(f"### Confidence: `{confidence:.2f}`")
 
 # =========================
-# HISTORY SECTION
+# HISTORY
 # =========================
 
 st.divider()
@@ -157,6 +135,8 @@ if len(st.session_state.history) == 0:
     st.info("No predictions yet.")
 else:
     for i, item in enumerate(reversed(st.session_state.history), 1):
-        st.markdown(f"### {i}. {item['prediction'].upper()} ({item['confidence']:.2f})")
+        st.markdown(
+            f"### {i}. {item['prediction'].upper()} ({item['confidence']:.2f})"
+        )
         st.write(item["text"])
         st.divider()
