@@ -1,0 +1,43 @@
+# ============================================================
+# NLP SENTIMENT ANALYSIS ML ENGINEERING SYSTEM
+# ------------------------------------------------------------
+# Core runtime dependencies.
+#
+# This file is the OFFICIAL dependency specification used by:
+# - GitHub Actions (CI/CD)
+# - Docker images
+# - DVC pipelines
+# - Airflow deployments
+# - AWS SageMaker
+# - Azure ML
+# - Google Vertex AI
+#
+# NOTE:
+# Personal developer utilities remain inside req.txt.
+# ============================================================
+
+numpy<2
+
+pandas
+scikit-learn
+
+torch
+torchvision
+torchaudio
+torchtext==0.15.1
+
+datasets
+transformers
+
+mlflow
+
+fastapi
+uvicorn
+pydantic
+email-validator
+
+pyyaml
+
+pytest
+ruff
+black
