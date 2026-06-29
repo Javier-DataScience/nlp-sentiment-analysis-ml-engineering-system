@@ -1,0 +1,102 @@
+# ============================================================
+# DOCKERFILE - STREAMLIT FRONTEND
+# ------------------------------------------------------------
+# PURPOSE:
+# Containerize the Streamlit frontend application.
+#
+# ARCHITECTURE:
+#
+# User
+#   ↓
+# Streamlit UI
+#   ↓ HTTP
+# FastAPI Service
+#   ↓
+# Champion Model
+#
+# DESIGN PRINCIPLES:
+#
+# - No ML logic inside Streamlit.
+# - All predictions go through FastAPI.
+# - Reuse the shared API client module.
+# - Reproduce the local development environment.
+#
+# FUTURE:
+#
+# - Docker Compose orchestration
+# - Airflow integration
+# - AWS deployment
+# - Azure deployment
+# - GCP deployment
+# ============================================================
+
+
+# ============================================================
+# BASE IMAGE
+# ============================================================
+
+FROM python:3.10-slim
+
+
+# ============================================================
+# PYTHON SETTINGS
+# ============================================================
+
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV PYTHONUNBUFFERED=1
+
+
+# ============================================================
+# WORKING DIRECTORY
+# ============================================================
+
+WORKDIR /app
+
+
+# ============================================================
+# COPY DEPENDENCY FILES
+# ------------------------------------------------------------
+# Copy these first to maximize Docker layer caching.
+# ============================================================
+
+COPY requirements.txt .
+COPY setup.py .
+
+
+# ============================================================
+# INSTALL DEPENDENCIES
+# ============================================================
+
+RUN pip install --upgrade pip
+
+RUN pip install -r requirements.txt
+
+
+# ============================================================
+# COPY PROJECT FILES
+# ============================================================
+
+COPY . .
+
+
+# ============================================================
+# INSTALL PROJECT PACKAGE
+# ------------------------------------------------------------
+# Reproduce the exact same environment used locally and in CI.
+# ============================================================
+
+RUN pip install -e .
+
+
+# ============================================================
+# EXPOSE STREAMLIT PORT
+# ============================================================
+
+EXPOSE 8501
+
+
+# ============================================================
+# START STREAMLIT APPLICATION
+# ============================================================
+
+CMD ["streamlit", "run", "ui/streamlit_app.py", "--server.address=0.0.0.0", "--server.port=8501"]
