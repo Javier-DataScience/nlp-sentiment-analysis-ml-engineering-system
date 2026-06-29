@@ -18,3 +18,4 @@ pip install -U email-validator
 pip install ruff black
 
 pip install requests
+pip install dvc
