@@ -1,0 +1,50 @@
+schema: '2.0'
+stages:
+  train:
+    cmd: python -m src.training.train
+    deps:
+    - path: config/config.yaml
+      hash: md5
+      md5: 45c9268e6eecef6556309b04cdd91e66
+      size: 316
+    - path: src/data
+      hash: md5
+      md5: f054b9ed21859ab0c07d7ccaeb960501.dir
+      size: 7222
+      nfiles: 7
+    - path: src/features
+      hash: md5
+      md5: 647e2df037e1b5469565d414d0c0c917.dir
+      size: 15225
+      nfiles: 11
+    - path: src/models
+      hash: md5
+      md5: 60c2d46df62410877765b14c721da987.dir
+      size: 21997
+      nfiles: 16
+    - path: src/training/train.py
+      hash: md5
+      md5: b748d01753b5f4ebf0f9da08fb5027e5
+      size: 11461
+    outs:
+    - path: artifacts
+      hash: md5
+      md5: b7abba91bfc7f5b66d855bdb25324fe6.dir
+      size: 989165
+      nfiles: 7
+    - path: models
+      hash: md5
+      md5: c66addfaa1fdb66d7548b0e99cd9af01.dir
+      size: 121228261
+      nfiles: 5
+  rank:
+    cmd: python -m src.tracking.model_ranker
+    deps:
+    - path: mlflow.db
+      hash: md5
+      md5: 69284d3fd8c7f268d1df572d8695c2de
+      size: 884736
+    - path: src/tracking/model_ranker.py
+      hash: md5
+      md5: d517045488aa2c4becee5c5c7b0d5ca1
+      size: 3324
