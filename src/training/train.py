@@ -161,6 +161,7 @@ from src.config.constants import PRIMARY_METRIC
 from src.data.dataset import SentimentDataset
 from src.features.tokenizer import SimpleTokenizer
 from src.models.model_factory import get_model
+from src.features.build_vocab import build_vocabulary_from_csv
 
 warnings.filterwarnings("ignore")
 
@@ -350,20 +351,27 @@ def train_one_model(model_name, config, train_loader, test_loader):
 def main():
 
     os.makedirs("models", exist_ok=True)
-    os.makedirs("artifacts", exist_ok=True)
 
     mlflow.set_tracking_uri("sqlite:///mlflow.db")
     mlflow.set_experiment("sentiment_experiment")
 
     print("Config loaded")
 
-    # ========================================================
-    # LOAD PRE-BUILT VOCABULARY
-    # ========================================================
-    with open("artifacts/vocab.pkl", "rb") as file:
-        vocab = pickle.load(file)
+    # ============================================================
+    # VOCAB GENERATION (DVC-COMPLIANT)
+    # ------------------------------------------------------------
+    # Always rebuild vocabulary inside pipeline
+    # ============================================================
 
-    print("Loaded vocabulary -> artifacts/vocab.pkl")
+    vocab = build_vocabulary_from_csv(split="train")
+
+    os.makedirs("artifacts", exist_ok=True)
+
+    # Save vocab as DVC artifact
+    with open("artifacts/vocab.pkl", "wb") as f:
+        pickle.dump(vocab, f)
+
+    print("Saved vocabulary -> artifacts/vocab.pkl")
 
     tokenizer = SimpleTokenizer()
 
