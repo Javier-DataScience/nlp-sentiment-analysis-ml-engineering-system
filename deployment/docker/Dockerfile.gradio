@@ -1,0 +1,98 @@
+# ============================================================
+# DOCKERFILE - GRADIO FRONTEND
+# ------------------------------------------------------------
+# PURPOSE:
+# Containerize the Gradio frontend application.
+#
+# ARCHITECTURE:
+#
+# User
+#   ↓
+# Gradio UI
+#   ↓ HTTP
+# FastAPI Service
+#   ↓
+# Champion Model
+#
+# DESIGN PRINCIPLES:
+#
+# - No ML logic inside Gradio.
+# - All predictions go through FastAPI.
+# - Reuse the shared API client module.
+# - Reproduce the local development environment.
+#
+# FUTURE:
+#
+# - Docker Compose orchestration
+# - Airflow integration
+# - AWS deployment
+# - Azure deployment
+# - GCP deployment
+# ============================================================
+
+
+# ============================================================
+# BASE IMAGE
+# ============================================================
+
+FROM python:3.10-slim
+
+
+# ============================================================
+# PYTHON SETTINGS
+# ============================================================
+
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV PYTHONUNBUFFERED=1
+
+
+# ============================================================
+# WORKING DIRECTORY
+# ============================================================
+
+WORKDIR /app
+
+
+# ============================================================
+# COPY DEPENDENCY FILES
+# ============================================================
+
+COPY requirements.txt .
+COPY setup.py .
+
+
+# ============================================================
+# INSTALL DEPENDENCIES
+# ============================================================
+
+RUN pip install --upgrade pip
+
+RUN pip install -r requirements.txt
+
+
+# ============================================================
+# COPY PROJECT FILES
+# ============================================================
+
+COPY . .
+
+
+# ============================================================
+# INSTALL PROJECT PACKAGE
+# ============================================================
+
+RUN pip install -e .
+
+
+# ============================================================
+# EXPOSE GRADIO PORT
+# ============================================================
+
+EXPOSE 7860
+
+
+# ============================================================
+# START GRADIO APPLICATION
+# ============================================================
+
+CMD ["python", "ui_gradio/gradio_app.py"]

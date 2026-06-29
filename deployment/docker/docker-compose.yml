@@ -1,0 +1,41 @@
+version: "3.9"
+
+services:
+
+  api:
+
+    image: nlp-sentiment-api:latest
+    container_name: nlp-api
+
+    ports:
+      - "8000:8000"
+
+
+  streamlit:
+
+    image: nlp-streamlit:latest
+    container_name: nlp-streamlit
+
+    ports:
+      - "8501:8501"
+
+    environment:
+      API_URL: http://api:8000
+
+    depends_on:
+      - api
+
+
+  gradio:
+
+    image: nlp-gradio:latest
+    container_name: nlp-gradio
+
+    ports:
+      - "7860:7860"
+
+    environment:
+      API_URL: http://api:8000
+
+    depends_on:
+      - api
