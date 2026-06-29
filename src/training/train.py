@@ -159,7 +159,6 @@ from torch.utils.data import DataLoader
 
 from src.config.constants import PRIMARY_METRIC
 from src.data.dataset import SentimentDataset
-from src.features.build_vocab import build_vocabulary_from_csv
 from src.features.tokenizer import SimpleTokenizer
 from src.models.model_factory import get_model
 
@@ -358,12 +357,13 @@ def main():
 
     print("Config loaded")
 
-    vocab = build_vocabulary_from_csv(split="train")
+    # ========================================================
+    # LOAD PRE-BUILT VOCABULARY
+    # ========================================================
+    with open("artifacts/vocab.pkl", "rb") as file:
+        vocab = pickle.load(file)
 
-    with open("artifacts/vocab.pkl", "wb") as file:
-        pickle.dump(vocab, file)
-
-    print("Saved vocabulary -> artifacts/vocab.pkl")
+    print("Loaded vocabulary -> artifacts/vocab.pkl")
 
     tokenizer = SimpleTokenizer()
 
@@ -378,7 +378,7 @@ def main():
         "training": {
             "lr": 0.001,
             "batch_size": 8,
-            "epochs": 3,
+            "epochs": 1,
         },
     }
 
