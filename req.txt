@@ -17,4 +17,4 @@ pip install datasets
 pip install -U email-validator
 pip install ruff black
 
-pip show streamlit
+pip install requests
