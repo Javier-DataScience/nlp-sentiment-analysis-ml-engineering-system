@@ -144,6 +144,7 @@ import os
 import pickle
 import warnings
 from typing import Any
+
 import mlflow
 import numpy as np
 import torch
@@ -374,15 +375,13 @@ def main():
     tokenizer = SimpleTokenizer()
 
     # ============================================================
-# MYPY COMPATIBILITY
-# ------------------------------------------------------------
-# Explicit typing prevents nested dictionaries from being
-# inferred as generic objects, allowing safe indexing like:
-#
-# config["training"]["batch_size"]
-# ============================================================
-
-
+    # MYPY COMPATIBILITY
+    # ------------------------------------------------------------
+    # Explicit typing prevents nested dictionaries from being
+    # inferred as generic objects, allowing safe indexing like:
+    #
+    # config["training"]["batch_size"]
+    # ============================================================
 
     config: dict[str, dict[str, Any]] = {
         "model": {

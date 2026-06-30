@@ -70,9 +70,7 @@ def main() -> None:
     # Explicit annotation required because MLflow exposes
     # incomplete type information to MyPy.
     # ========================================================
-    runs: pd.DataFrame = mlflow.search_runs(
-        experiment_ids=[experiment.experiment_id]
-    )
+    runs: pd.DataFrame = mlflow.search_runs(experiment_ids=[experiment.experiment_id])
 
     columns = [
         "run_id",
@@ -108,9 +106,7 @@ def main() -> None:
     # ========================================================
     clean_df = runs.copy()
 
-    clean_df = clean_df[
-        (clean_df["accuracy"] > 0.0) & (clean_df["accuracy"] < 1.0)
-    ]
+    clean_df = clean_df[(clean_df["accuracy"] > 0.0) & (clean_df["accuracy"] < 1.0)]
 
     # ========================================================
     # RANKING
