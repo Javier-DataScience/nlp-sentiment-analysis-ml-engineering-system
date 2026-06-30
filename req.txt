@@ -19,3 +19,5 @@ pip install ruff black
 
 pip install requests
 pip install dvc
+
+pip install mypy pre-commit ####

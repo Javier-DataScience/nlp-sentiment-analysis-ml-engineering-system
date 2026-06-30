@@ -11,7 +11,7 @@
 # without sys.path hacks or notebook dependencies.
 # ============================================================
 
-from setuptools import setup, find_packages
+from setuptools import find_packages, setup
 
 setup(
     name="nlp-sentiment-analysis",

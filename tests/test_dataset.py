@@ -24,6 +24,11 @@
 # Tensor conversion
 #     ↓
 # Model-ready sample
+#
+# MYPY NOTES:
+# - Explicit Counter typing is used.
+# - Method monkey-patching is intentionally performed to keep
+#   tests completely offline and deterministic.
 # ============================================================
 
 from collections import Counter
@@ -56,7 +61,7 @@ def test_dataset():
     # ========================================================
     # BUILD TEST VOCABULARY
     # ========================================================
-    counter = Counter()
+    counter: Counter[str] = Counter()
 
     for text, _ in sample_data:
         counter.update(tokenizer.tokenize(text))
@@ -73,7 +78,9 @@ def test_dataset():
     # ========================================================
     original_loader = SentimentDataset._load_data
 
-    SentimentDataset._load_data = lambda self, split: sample_data
+    SentimentDataset._load_data = (  # type: ignore[method-assign]
+        lambda self, split: sample_data
+    )
 
     try:
 
@@ -107,4 +114,4 @@ def test_dataset():
         # ====================================================
         # RESTORE ORIGINAL IMPLEMENTATION
         # ====================================================
-        SentimentDataset._load_data = original_loader
+        SentimentDataset._load_data = original_loader  # type: ignore[method-assign]

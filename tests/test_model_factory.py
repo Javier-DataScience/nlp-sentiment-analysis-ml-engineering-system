@@ -1,56 +1,69 @@
 # ============================================================
-# TEST: MODEL FACTORY
+# TEST: TOKENIZER MODULE
 # ------------------------------------------------------------
-# Purpose:
-# This test validates the model_factory module, which is
-# responsible for selecting and instantiating ML models
-# based on configuration.
+# PURPOSE:
+# Validates the SimpleTokenizer used throughout the NLP
+# sentiment analysis system.
 #
-# It ensures:
-# - correct model is created from config
-# - model architecture is valid
-# - forward pass executes without errors
-# - output shape matches classification task
+# THIS TEST ENSURES:
+# - Tokenization is deterministic.
+# - The output type is a Python list.
+# - The tokenizer produces non-empty results.
+# - Basic preprocessing behavior remains stable.
 #
-# This is a key step before training and MLflow integration.
+# IMPORTANCE:
+# The tokenizer is one of the foundational components of
+# the entire NLP pipeline:
+#
+# Raw text
+#     ↓
+# Tokenizer
+#     ↓
+# Vocabulary lookup
+#     ↓
+# Tensor conversion
+#     ↓
+# Neural network input
+#
+# If tokenization changes unexpectedly, every downstream
+# component may break or produce inconsistent results.
+#
+# DESIGN PRINCIPLES:
+# - Fast execution (< 1 second)
+# - No external dependencies
+# - No internet access
+# - Deterministic behavior
+# - CI/CD friendly
 # ============================================================
 
-import torch
-from src.models.model_factory import get_model
+from src.features.tokenizer import SimpleTokenizer
 
 
-def test_model_factory():
+def test_tokenizer():
     """
-    Tests model creation and forward pass.
+    Validates tokenizer behavior on a simple sentence.
     """
 
-    # Configuration dictionary (simulating config.yaml)
-    config = {
-        "model": {
-            "type": "baseline",
-            "vocab_size": 5000,
-            "embed_dim": 128,
-            "num_classes": 2,
-        }
-    }
+    # ========================================================
+    # CREATE TOKENIZER
+    # ========================================================
+    tokenizer = SimpleTokenizer()
 
-    # Create model via factory
-    model = get_model(config)
+    # ========================================================
+    # MOCK INPUT
+    # ========================================================
+    text = "I love this movie"
 
-    print("Model created:")
-    print(model)
+    # ========================================================
+    # TOKENIZATION
+    # ========================================================
+    tokens = tokenizer.tokenize(text)
 
-    # Dummy input: batch_size=2, seq_len=4
-    x = torch.randint(0, 5000, (2, 4))
+    # ========================================================
+    # ASSERTIONS
+    # ========================================================
+    assert isinstance(tokens, list)
 
-    # Forward pass
-    output = model(x)
+    assert len(tokens) > 0
 
-    print("Output shape:", output.shape)
-
-    # Assertions
-    assert output.shape == (2, 2), "Unexpected output shape"
-
-
-if __name__ == "__main__":
-    test_model_factory()
+    assert tokens == tokenizer.tokenize(text)

@@ -2,13 +2,16 @@
 # TEST: VOCABULARY MODULE
 # ------------------------------------------------------------
 # PURPOSE:
-# Validates the production Vocabulary implementation.
+# Validates the production Vocabulary implementation used by
+# the NLP sentiment analysis pipeline.
 #
-# Ensures:
-# - special tokens exist
-# - token → id mapping works
-# - unknown token handling works
-# - reverse lookup works
+# THIS TEST ENSURES:
+# - Special tokens exist.
+# - Token → ID mapping works correctly.
+# - Unknown token handling behaves as expected.
+# - Reverse lookup (ID → token) works.
+#
+# IMPLEMENTATION DETAILS:
 #
 # The production implementation uses:
 #
@@ -20,6 +23,23 @@
 # stoi
 # itos
 #
+# ARCHITECTURE:
+#
+# Raw tokens
+#     ↓
+# Counter
+#     ↓
+# Vocabulary.build()
+#     ↓
+# token_to_id mapping
+#     ↓
+# Reverse decoding
+#
+# DESIGN PRINCIPLES:
+# - Fast execution (< 1 second)
+# - No external dependencies
+# - Deterministic behavior
+# - CI/CD friendly
 # ============================================================
 
 from collections import Counter
@@ -32,17 +52,26 @@ def test_vocabulary():
     Tests vocabulary construction and lookup behavior.
     """
 
+    # ========================================================
+    # MOCK TOKENIZED SENTENCES
+    # ========================================================
     tokens = [
         ["i", "love", "this", "movie"],
         ["this", "movie", "is", "great"],
         ["i", "hate", "this", "film"],
     ]
 
-    counter = Counter()
+    # ========================================================
+    # BUILD TOKEN COUNTS
+    # ========================================================
+    counter: Counter[str] = Counter()
 
     for sentence in tokens:
         counter.update(sentence)
 
+    # ========================================================
+    # BUILD VOCABULARY
+    # ========================================================
     vocab = Vocabulary()
 
     vocab.build(list(counter.keys()))

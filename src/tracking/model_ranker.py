@@ -14,19 +14,25 @@
 #
 # CRITICAL DESIGN PRINCIPLE:
 # Champion selection MUST be deterministic and persisted.
+#
+# MYPY NOTES:
+# - MLflow's search_runs() type hints are incomplete.
+# - We explicitly annotate the returned object as a
+#   Pandas DataFrame to enable static analysis.
 # ============================================================
+
+import json
+import os
 
 import mlflow
 import pandas as pd
-import json
-import os
 
 from src.config.constants import PRIMARY_METRIC
 
 CHAMPION_PATH = "artifacts/champion.json"
 
 
-def save_champion(row: pd.Series):
+def save_champion(row: pd.Series) -> None:
     """
     Persist champion model metadata for inference use.
     """
@@ -46,7 +52,7 @@ def save_champion(row: pd.Series):
     print(f"\nChampion saved to {CHAMPION_PATH}")
 
 
-def main():
+def main() -> None:
 
     mlflow.set_tracking_uri("sqlite:///mlflow.db")
 
@@ -58,7 +64,15 @@ def main():
 
     print("\nLoading MLflow runs...\n")
 
-    runs = mlflow.search_runs(experiment_ids=[experiment.experiment_id])
+    # ========================================================
+    # LOAD MLFLOW RUNS
+    # --------------------------------------------------------
+    # Explicit annotation required because MLflow exposes
+    # incomplete type information to MyPy.
+    # ========================================================
+    runs: pd.DataFrame = mlflow.search_runs(
+        experiment_ids=[experiment.experiment_id]
+    )
 
     columns = [
         "run_id",
@@ -73,9 +87,18 @@ def main():
     # Keep only available columns safely
     available_columns = runs.columns.tolist()
     valid_columns = [c for c in columns if c in available_columns]
+
     runs = runs[valid_columns]
 
-    runs.columns = ["run_id", "model", "accuracy", "f1", "precision", "recall", "loss"]
+    runs.columns = [
+        "run_id",
+        "model",
+        "accuracy",
+        "f1",
+        "precision",
+        "recall",
+        "loss",
+    ]
 
     print("\nRAW DATA:")
     print(runs)
@@ -85,7 +108,9 @@ def main():
     # ========================================================
     clean_df = runs.copy()
 
-    clean_df = clean_df[(clean_df["accuracy"] > 0.0) & (clean_df["accuracy"] < 1.0)]
+    clean_df = clean_df[
+        (clean_df["accuracy"] > 0.0) & (clean_df["accuracy"] < 1.0)
+    ]
 
     # ========================================================
     # RANKING
@@ -94,9 +119,10 @@ def main():
 
     clean_df = clean_df.groupby("model", as_index=False).first()
 
-    leaderboard = clean_df.sort_values(PRIMARY_METRIC, ascending=False).reset_index(
-        drop=True
-    )
+    leaderboard = clean_df.sort_values(
+        PRIMARY_METRIC,
+        ascending=False,
+    ).reset_index(drop=True)
 
     leaderboard["rank"] = leaderboard.index + 1
 

@@ -1,4 +1,4 @@
 [core]
     remote = local_storage
 ['remote "local_storage"']
-    url = D:\ML-PROJECTS\dvc-storage\nlp-sentiment
+    url = D:/ML-PROJECTS/dvc-storage/nlp-sentiment

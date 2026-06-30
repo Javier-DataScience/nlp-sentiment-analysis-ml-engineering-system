@@ -143,25 +143,23 @@ import json
 import os
 import pickle
 import warnings
-
+from typing import Any
 import mlflow
 import numpy as np
 import torch
-
 from sklearn.metrics import (
     accuracy_score,
     f1_score,
     precision_score,
     recall_score,
 )
-
 from torch.utils.data import DataLoader
 
 from src.config.constants import PRIMARY_METRIC
 from src.data.dataset import SentimentDataset
+from src.features.build_vocab import build_vocabulary_from_csv
 from src.features.tokenizer import SimpleTokenizer
 from src.models.model_factory import get_model
-from src.features.build_vocab import build_vocabulary_from_csv
 
 warnings.filterwarnings("ignore")
 
@@ -375,7 +373,18 @@ def main():
 
     tokenizer = SimpleTokenizer()
 
-    config = {
+    # ============================================================
+# MYPY COMPATIBILITY
+# ------------------------------------------------------------
+# Explicit typing prevents nested dictionaries from being
+# inferred as generic objects, allowing safe indexing like:
+#
+# config["training"]["batch_size"]
+# ============================================================
+
+
+
+    config: dict[str, dict[str, Any]] = {
         "model": {
             "type": "baseline",
             "vocab_size": len(vocab.token_to_id),

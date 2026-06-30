@@ -2,7 +2,8 @@
 # VOCABULARY BUILDER (PRODUCTION + TRAINING COMPATIBLE)
 # ------------------------------------------------------------
 # PURPOSE:
-# Builds a clean vocabulary from the IMDb dataset using HuggingFace.
+# Builds a clean vocabulary from the IMDb dataset using
+# HuggingFace.
 #
 # KEY FEATURES:
 # - Stable deterministic vocabulary creation
@@ -12,9 +13,14 @@
 #
 # OUTPUT:
 # - Vocabulary object ready for model embedding layers
+#
+# MYPY NOTES:
+# - Explicit type annotations are used for counters to enable
+#   static type checking.
 # ============================================================
 
 from collections import Counter
+
 from datasets import load_dataset
 
 from src.features.tokenizer import SimpleTokenizer
@@ -43,7 +49,9 @@ def build_vocabulary_from_csv(csv_path=None, split="train", min_freq=2):
     dataset = load_dataset("imdb")[split]
 
     tokenizer = SimpleTokenizer()
-    counter = Counter()
+
+    # Explicit annotation for MyPy compatibility
+    counter: Counter[str] = Counter()
 
     # ========================================================
     # STEP 1: TOKENIZE ENTIRE CORPUS
@@ -55,7 +63,9 @@ def build_vocabulary_from_csv(csv_path=None, split="train", min_freq=2):
     # ========================================================
     # STEP 2: FILTER LOW-FREQUENCY TOKENS
     # ========================================================
-    filtered_tokens = [token for token, freq in counter.items() if freq >= min_freq]
+    filtered_tokens = [
+        token for token, freq in counter.items() if freq >= min_freq
+    ]
 
     # ========================================================
     # STEP 3: BUILD VOCABULARY

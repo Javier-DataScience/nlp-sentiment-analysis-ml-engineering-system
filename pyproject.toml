@@ -1,0 +1,102 @@
+# ============================================================
+# PYPROJECT CONFIGURATION
+# ------------------------------------------------------------
+# PURPOSE:
+# Centralized configuration for code quality tools.
+#
+# CURRENT TOOLS:
+# - Ruff (linting)
+# - Black (formatter) [future]
+# - MyPy (type checking) [future]
+#
+# DESIGN PRINCIPLES:
+# - Keep rules simple.
+# - Avoid overengineering.
+# - Prefer readability over strictness.
+# - Make CI/CD deterministic.
+# ============================================================
+
+[tool.ruff]
+
+line-length = 88
+target-version = "py310"
+
+exclude = [
+    ".git",
+    ".dvc",
+    "__pycache__",
+    ".pytest_cache",
+    ".mypy_cache",
+    "models",
+    "artifacts"
+]
+
+[tool.ruff.lint]
+
+select = [
+    "E",   # pycodestyle errors
+    "F",   # pyflakes
+    "I"    # import sorting
+]
+
+ignore = []
+
+# ============================================================
+# BLACK CONFIGURATION
+# ------------------------------------------------------------
+# PURPOSE:
+# Standardize code formatting across the entire project.
+#
+# DESIGN PRINCIPLES:
+# - Match Ruff line length.
+# - Keep formatting deterministic.
+# - Make CI/CD and pre-commit reproducible.
+# ============================================================
+
+[tool.black]
+
+line-length = 88
+target-version = ["py310"]
+
+exclude = '''
+/(
+    \.git
+  | \.dvc
+  | __pycache__
+  | \.pytest_cache
+  | \.mypy_cache
+  | models
+  | artifacts
+)/
+'''
+
+# ============================================================
+# MYPY CONFIGURATION
+# ------------------------------------------------------------
+# PURPOSE:
+# Static type checking for the NLP ML engineering system.
+#
+# DESIGN PRINCIPLES:
+# - Start permissive.
+# - Adopt types incrementally.
+# - Avoid blocking development.
+# - Tighten rules as the project matures.
+# ============================================================
+
+[tool.mypy]
+
+python_version = "3.10"
+
+ignore_missing_imports = true
+
+warn_return_any = true
+warn_unused_configs = true
+
+disallow_untyped_defs = false
+check_untyped_defs = true
+
+exclude = [
+    "models/",
+    "artifacts/",
+    "notebooks/"
+]

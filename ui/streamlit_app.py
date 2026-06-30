@@ -7,9 +7,10 @@ Streamlit → API Client → FastAPI → Model
 No direct inference logic in UI.
 """
 
-import streamlit as st
 import json
 from pathlib import Path
+
+import streamlit as st
 
 from src.client.api_client import SentimentAPIClient
 
